@@ -1,4 +1,5 @@
 # Krop
+[![Build Status](https://travis-ci.org/avito-tech/krop.svg?branch=master)](https://travis-ci.org/avito-tech/krop) [![JitPack](https://jitpack.io/v/avito-tech/krop.svg)](https://jitpack.io/#avito-tech/krop)
 
 The library is a small widget for image cropping in Instagram-like style.
 

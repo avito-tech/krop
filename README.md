@@ -9,19 +9,19 @@ The library is a small widget for image cropping in Instagram-like style.
 Step 1. Add this in your root `build.gradle`
 
 ```
-	allprojects {
-		repositories {
-			maven { url 'https://jitpack.io' }
-		}
-	}
+    allprojects {
+        repositories {
+            maven { url 'https://jitpack.io' }
+        }
+    }
 ```
 
 Step 2. Add the dependency
 
 ```
-	dependencies {
+    dependencies {
         compile 'com.github.avito-tech:krop:VERSION'
-	}
+    }
 ```
 
 If you like to stay on the bleeding edge, or use certain commit as your dependency, you can use the short commit hash or anyBranch-SNAPSHOT as the version

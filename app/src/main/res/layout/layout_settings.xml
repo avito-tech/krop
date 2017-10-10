@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:paddingTop="12dp"
+        android:text="@string/offset"
+        android:textColor="?android:textColorSecondary"
+        android:textSize="14sp" />
+
+    <SeekBar
+        android:id="@+id/input_offset"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="50"
+        android:progress="0" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:paddingTop="12dp"
+        android:text="@string/aspect_x"
+        android:textColor="?android:textColorSecondary"
+        android:textSize="14sp" />
+
+    <SeekBar
+        android:id="@+id/input_aspect_x"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="9"
+        android:progress="0" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:paddingTop="12dp"
+        android:text="@string/aspect_x"
+        android:textColor="?android:textColorSecondary"
+        android:textSize="14sp" />
+
+    <SeekBar
+        android:id="@+id/input_aspect_y"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="9"
+        android:progress="0" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="12dp">
+
+        <android.support.design.widget.TextInputLayout
+            android:id="@+id/input_layout_overlay_color"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+
+            <EditText
+                android:id="@+id/input_overlay_color"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_overlay_color" />
+
+        </android.support.design.widget.TextInputLayout>
+
+        <Button
+            android:id="@+id/pick_color_button"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pick" />
+
+    </LinearLayout>
+
+</LinearLayout>

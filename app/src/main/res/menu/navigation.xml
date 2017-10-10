@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_crop"
+        android:icon="@drawable/scissors"
+        android:title="@string/menu_crop" />
+    <item
+        android:id="@+id/action_settings"
+        android:icon="@drawable/settings"
+        android:title="@string/menu_settings" />
+    <item
+        android:id="@+id/action_result"
+        android:icon="@drawable/result"
+        android:title="@string/menu_result" />
+</menu>

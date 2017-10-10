@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <attr name="krop_offset" format="dimension" />
+    <attr name="krop_aspectX" format="integer" />
+    <attr name="krop_aspectY" format="integer" />
+    <attr name="krop_overlayColor" format="color" />
+
+    <declare-styleable name="KropView">
+        <attr name="krop_offset" />
+        <attr name="krop_aspectX" />
+        <attr name="krop_aspectY" />
+        <attr name="krop_overlayColor" />
+    </declare-styleable>
+
+</resources>

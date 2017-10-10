@@ -1,0 +1,16 @@
+*.iml
+*.zip
+.gradle
+/local.properties
+.DS_Store
+*build/
+/captures
+.externalNativeBuild
+
+# IDE folders #
+gen/
+bin/
+out/
+proguard_logs/
+projectFilesBackup/
+.idea/*

@@ -20,6 +20,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
     private var aspectY = 1
     private var overlayColor = Color.TRANSPARENT
     private var bitmap: Bitmap? = null
+    private var overlayShape: Int = SHAPE_OVAL
 
     private lateinit var imageView: ZoomableImageView
     private lateinit var overlayView: OverlayView
@@ -39,6 +40,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
                 offset = getDimensionPixelOffset(R.styleable.KropView_krop_offset, offset)
                 aspectX = getInteger(R.styleable.KropView_krop_aspectX, aspectX)
                 aspectY = getInteger(R.styleable.KropView_krop_aspectY, aspectY)
+                overlayShape = getInteger(R.styleable.KropView_krop_shape, overlayShape)
                 overlayColor = getColor(R.styleable.KropView_krop_overlayColor, overlayColor)
             }
         } finally {
@@ -55,7 +57,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         }
         addView(imageView)
 
-        overlayView = OverlayView(context)
+        overlayView = OverlayView(context, overlayShape)
         overlayView.setOverlayColor(overlayColor)
         addView(overlayView)
     }

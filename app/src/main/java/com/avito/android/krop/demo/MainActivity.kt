@@ -105,13 +105,13 @@ class MainActivity : AppCompatActivity() {
                 }
             })
         } else {
-            navigation.post({
+            navigation.post {
                 when (navigation.selectedItemId) {
                     R.id.action_crop -> showCrop()
                     R.id.action_settings -> showSettings()
                     R.id.action_result -> showPreview()
                 }
-            })
+            }
         }
 
         if (uri == Uri.EMPTY) {
@@ -220,10 +220,10 @@ class MainActivity : AppCompatActivity() {
             val aspectX = inputAspectX.progress + 1
             val aspectY = inputAspectY.progress + 1
             val overlayColor = Color.parseColor(inputOverlayColor.text.toString())
-            with(kropView) {
-                kropView.applyAspectRatio(aspectX, aspectY)
-                kropView.applyOffset(offset)
-                kropView.applyOverlayColor(overlayColor)
+            kropView.apply {
+                applyAspectRatio(aspectX, aspectY)
+                applyOffset(offset)
+                applyOverlayColor(overlayColor)
             }
         } catch (ignored: Throwable) {
             Snackbar.make(kropView, R.string.unable_to_apply_settings, Snackbar.LENGTH_LONG).show()

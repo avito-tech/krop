@@ -56,7 +56,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         addView(imageView)
 
         overlayView = OverlayView(context)
-        overlayView.setBackgroundColor(overlayColor)
+        overlayView.setOverlayColor(overlayColor)
         addView(overlayView)
     }
 
@@ -134,7 +134,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
 
     fun applyOverlayColor(color: Int) {
         this.overlayColor = color
-        overlayView.setBackgroundColor(overlayColor)
+        overlayView.setOverlayColor(overlayColor)
         invalidate()
     }
 
@@ -163,7 +163,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
             aspectY = state.aspectY
             overlayColor = state.overlayColor
             imageView.onRestoreInstanceState(state.imageViewState)
-            overlayView.setBackgroundColor(overlayColor)
+            overlayView.setOverlayColor(overlayColor)
         } else {
             super.onRestoreInstanceState(state)
         }

@@ -11,15 +11,17 @@ import android.view.View
 
 class OverlayView(context: Context) : View(context) {
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var overlayColor: Int = Color.TRANSPARENT
+    private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     var viewport = RectF()
 
     init {
         setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-        paint.color = Color.BLACK
-        paint.style = Paint.Style.FILL
-        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+
+        clearPaint.color = Color.BLACK
+        clearPaint.style = Paint.Style.FILL
+        clearPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -38,10 +40,16 @@ class OverlayView(context: Context) : View(context) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
+    fun setOverlayColor(color: Int) {
+        overlayColor = color
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        canvas.drawOval(viewport, paint)
+        canvas.drawColor(overlayColor)
+        canvas.drawOval(viewport, clearPaint)
     }
 
 }

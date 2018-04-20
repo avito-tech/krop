@@ -411,14 +411,12 @@ class ZoomableImageView : ImageView {
         val redundantYSpace = viewSize.height - scaleY * drawableHeight
         matchViewSize.width = viewSize.width - redundantXSpace
         matchViewSize.height = viewSize.height - redundantYSpace
-        if (!isZoomed && !imageRenderedAtLeastOnce) {
+
+        if ((!isZoomed && !imageRenderedAtLeastOnce) || (prevMatchViewSize.width == 0.0f && prevMatchViewSize.height == 0.0f)) {
             imgMatrix.setScale(scaleX, scaleY)
             imgMatrix.postTranslate(redundantXSpace / 2, redundantYSpace / 2)
             currentZoom = 1.0f
         } else {
-            if (prevMatchViewSize.width == 0.0f || prevMatchViewSize.height == 0.0f) {
-                savePreviousImageValues()
-            }
 
             prevMatrix.getValues(matrix)
 

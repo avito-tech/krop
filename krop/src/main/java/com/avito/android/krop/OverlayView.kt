@@ -7,14 +7,20 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
+import android.support.annotation.IntDef
 import android.view.View
 
 class OverlayView(context: Context) : View(context) {
 
     private var overlayColor: Int = Color.TRANSPARENT
+    private var overlayShape: Int = SHAPE_OVAL
     private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     var viewport = RectF()
+
+    constructor(context: Context, @OverlayShape shape: Int) : this(context) {
+        this.overlayShape = shape
+    }
 
     init {
         setLayerType(View.LAYER_TYPE_SOFTWARE, null)
@@ -45,11 +51,26 @@ class OverlayView(context: Context) : View(context) {
         invalidate()
     }
 
+    fun setOverlayShape(@OverlayShape shape: Int) {
+        overlayShape = shape
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         canvas.drawColor(overlayColor)
-        canvas.drawOval(viewport, clearPaint)
+        when (overlayShape) {
+            SHAPE_OVAL -> canvas.drawOval(viewport, clearPaint)
+            else -> canvas.drawRect(viewport, clearPaint)
+        }
     }
 
 }
+
+@IntDef(SHAPE_OVAL, SHAPE_RECT)
+@Retention(AnnotationRetention.SOURCE)
+annotation class OverlayShape
+
+const val SHAPE_OVAL = 0
+const val SHAPE_RECT = 1

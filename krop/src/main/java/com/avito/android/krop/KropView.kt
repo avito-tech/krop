@@ -19,6 +19,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
     private var aspectX = 1
     private var aspectY = 1
     private var overlayColor = Color.TRANSPARENT
+    private var overlayShape: Int = SHAPE_OVAL
     private var bitmap: Bitmap? = null
 
     private lateinit var imageView: ZoomableImageView
@@ -39,6 +40,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
                 offset = getDimensionPixelOffset(R.styleable.KropView_krop_offset, offset)
                 aspectX = getInteger(R.styleable.KropView_krop_aspectX, aspectX)
                 aspectY = getInteger(R.styleable.KropView_krop_aspectY, aspectY)
+                overlayShape = getInteger(R.styleable.KropView_krop_shape, overlayShape)
                 overlayColor = getColor(R.styleable.KropView_krop_overlayColor, overlayColor)
             }
         } finally {
@@ -55,7 +57,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         }
         addView(imageView)
 
-        overlayView = OverlayView(context)
+        overlayView = OverlayView(context, overlayShape)
         overlayView.setOverlayColor(overlayColor)
         addView(overlayView)
     }
@@ -138,6 +140,12 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         invalidate()
     }
 
+    fun applyOverlayShape(shape: Int) {
+        this.overlayShape = shape
+        overlayView.setOverlayShape(overlayShape)
+        invalidate()
+    }
+
     override fun invalidate() {
         imageView.invalidate()
         overlayView.invalidate()
@@ -151,6 +159,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
                 aspectX = aspectX,
                 aspectY = aspectY,
                 overlayColor = overlayColor,
+                overlayShape = overlayShape,
                 imageViewState = imageView.onSaveInstanceState()
         )
     }
@@ -162,8 +171,12 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
             aspectX = state.aspectX
             aspectY = state.aspectY
             overlayColor = state.overlayColor
+            overlayShape = state.overlayShape
             imageView.onRestoreInstanceState(state.imageViewState)
-            overlayView.setOverlayColor(overlayColor)
+            overlayView.apply {
+                setOverlayColor(overlayColor)
+                setOverlayShape(overlayShape)
+            }
         } else {
             super.onRestoreInstanceState(state)
         }
@@ -223,6 +236,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         var aspectX: Int
         var aspectY: Int
         var overlayColor: Int
+        var overlayShape: Int
         val imageViewState: Parcelable
 
         constructor(superState: Parcelable,
@@ -230,11 +244,13 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
                     aspectX: Int,
                     aspectY: Int,
                     overlayColor: Int,
+                    @OverlayShape overlayShape: Int,
                     imageViewState: Parcelable) : super(superState) {
             this.offset = offset
             this.aspectX = aspectX
             this.aspectY = aspectY
             this.overlayColor = overlayColor
+            this.overlayShape = overlayShape
             this.imageViewState = imageViewState
         }
 
@@ -243,6 +259,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
             aspectX = source.readInt()
             aspectY = source.readInt()
             overlayColor = source.readInt()
+            overlayShape = source.readInt()
             imageViewState = source.readParcelable(Parcelable::class.java.classLoader)
         }
 
@@ -263,6 +280,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
                 writeInt(aspectX)
                 writeInt(aspectY)
                 writeInt(overlayColor)
+                writeInt(overlayShape)
                 writeParcelable(imageViewState, flags)
             }
         }

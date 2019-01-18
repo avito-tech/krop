@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var inputAspectY: SeekBar
     private lateinit var pickColorButton: Button
     private lateinit var inputOverlayColor: EditText
+    private lateinit var overlayShape: RadioGroup
 
     private var uri: Uri = Uri.EMPTY
 
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         inputAspectY = findViewById(R.id.input_aspect_y)
         pickColorButton = findViewById(R.id.pick_color_button)
         inputOverlayColor = findViewById(R.id.input_overlay_color)
+        overlayShape = findViewById(R.id.overlay_shape)
 
         kropView = findViewById(R.id.krop_view)
 
@@ -105,13 +107,13 @@ class MainActivity : AppCompatActivity() {
                 }
             })
         } else {
-            navigation.post({
+            navigation.post {
                 when (navigation.selectedItemId) {
                     R.id.action_crop -> showCrop()
                     R.id.action_settings -> showSettings()
                     R.id.action_result -> showPreview()
                 }
-            })
+            }
         }
 
         if (uri == Uri.EMPTY) {
@@ -220,10 +222,15 @@ class MainActivity : AppCompatActivity() {
             val aspectX = inputAspectX.progress + 1
             val aspectY = inputAspectY.progress + 1
             val overlayColor = Color.parseColor(inputOverlayColor.text.toString())
-            with(kropView) {
-                kropView.applyAspectRatio(aspectX, aspectY)
-                kropView.applyOffset(offset)
-                kropView.applyOverlayColor(overlayColor)
+            val shape = when(overlayShape.checkedRadioButtonId) {
+                R.id.shape_oval -> 0
+                else -> 1
+            }
+            kropView.apply {
+                applyAspectRatio(aspectX, aspectY)
+                applyOffset(offset)
+                applyOverlayColor(overlayColor)
+                applyOverlayShape(shape)
             }
         } catch (ignored: Throwable) {
             Snackbar.make(kropView, R.string.unable_to_apply_settings, Snackbar.LENGTH_LONG).show()

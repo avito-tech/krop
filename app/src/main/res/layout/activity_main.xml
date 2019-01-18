@@ -37,6 +37,7 @@
                 app:krop_aspectX="1"
                 app:krop_aspectY="1"
                 app:krop_offset="@dimen/default_offset"
+                app:krop_shape="oval"
                 app:krop_overlayColor="@color/default_overlay_color" />
 
             <FrameLayout

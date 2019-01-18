@@ -15,4 +15,7 @@
     <string name="unable_to_apply_settings">Unable to apply settings</string>
     <string name="apply_settings">Apply Settings</string>
     <string name="unable_to_load_image">Unable to load image</string>
+    <string name="overlay_shape">Overlay shape</string>
+    <string name="shape_oval">Oval</string>
+    <string name="shape_rect">Rect</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.avito.android.krop
 
+import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.content.Context
 import android.content.res.Configuration
@@ -18,7 +19,6 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.OverScroller
@@ -28,6 +28,7 @@ import android.widget.Scroller
  * ZoomableImageView allows you to zoom and move bitmap on view with touch effects
  * Based on TouchImageView by Michael Ortiz
  */
+@Suppress("unused", "MemberVisibilityCanBePrivate")
 class ZoomableImageView : ImageView {
 
     private enum class State {
@@ -49,7 +50,7 @@ class ZoomableImageView : ImageView {
 
     private val lastMovePoint = PointF()
 
-    private lateinit var imageScaleType: ImageView.ScaleType
+    private lateinit var imageScaleType: ScaleType
 
     private var imageRenderedAtLeastOnce: Boolean = false
     private var onDrawReady: Boolean = false
@@ -67,7 +68,7 @@ class ZoomableImageView : ImageView {
     private lateinit var gestureDetector: GestureDetector
 
     var doubleTapListener: GestureDetector.OnDoubleTapListener? = null
-    var userTouchListener: View.OnTouchListener? = null
+    var userTouchListener: OnTouchListener? = null
     var imageMoveListener: ImageMoveListener? = null
 
     private val imageWidth: Float
@@ -98,7 +99,7 @@ class ZoomableImageView : ImageView {
 
     val zoomedRect: RectF
         get() {
-            if (imageScaleType == ImageView.ScaleType.FIT_XY) {
+            if (imageScaleType == ScaleType.FIT_XY) {
                 throw UnsupportedOperationException("getZoomedRect() not supported with FIT_XY")
             }
             val topLeft = transformCoordTouchToBitmap(x = 0.0f, y = 0.0f, clipToBitmap = true)
@@ -143,13 +144,13 @@ class ZoomableImageView : ImageView {
         prevMatrix = Matrix()
         matrix = FloatArray(9)
         currentZoom = 1.0f
-        imageScaleType = ImageView.ScaleType.CENTER_CROP
+        imageScaleType = ScaleType.CENTER_CROP
         minScale = 1.0f
         maxScale = 5.0f
         superMinScale = SUPER_MIN_MULTIPLIER * minScale
         superMaxScale = SUPER_MAX_MULTIPLIER * maxScale
         imageMatrix = imgMatrix
-        scaleType = ImageView.ScaleType.MATRIX
+        scaleType = ScaleType.MATRIX
         state = State.NONE
         onDrawReady = false
     }
@@ -178,12 +179,12 @@ class ZoomableImageView : ImageView {
         fitImageToView()
     }
 
-    override fun setScaleType(type: ImageView.ScaleType) {
-        if (type == ImageView.ScaleType.FIT_START || type == ImageView.ScaleType.FIT_END) {
+    override fun setScaleType(type: ScaleType) {
+        if (type == ScaleType.FIT_START || type == ScaleType.FIT_END) {
             throw UnsupportedOperationException("ZoomableImageView does not support FIT_START or FIT_END")
         }
-        if (type == ImageView.ScaleType.MATRIX) {
-            super.setScaleType(ImageView.ScaleType.MATRIX)
+        if (type == ScaleType.MATRIX) {
+            super.setScaleType(ScaleType.MATRIX)
         } else {
             imageScaleType = type
             if (onDrawReady) {
@@ -192,7 +193,7 @@ class ZoomableImageView : ImageView {
         }
     }
 
-    override fun getScaleType(): ImageView.ScaleType {
+    override fun getScaleType(): ScaleType {
         return imageScaleType
     }
 
@@ -216,7 +217,8 @@ class ZoomableImageView : ImageView {
                 matrix,
                 matchViewSize,
                 viewSize,
-                imageRenderedAtLeastOnce)
+                imageRenderedAtLeastOnce
+        )
     }
 
     public override fun onRestoreInstanceState(state: Parcelable) {
@@ -258,7 +260,7 @@ class ZoomableImageView : ImageView {
     fun setZoom(scale: Float,
                 focusX: Float = 0.5f,
                 focusY: Float = 0.5f,
-                scaleType: ImageView.ScaleType = imageScaleType) {
+                scaleType: ScaleType = imageScaleType) {
         if (!onDrawReady) {
             delayedZoomVariables = ZoomVariables(scale, focusX, focusY, scaleType)
             return
@@ -345,10 +347,10 @@ class ZoomableImageView : ImageView {
 
         val drawableWidth = drawable.intrinsicWidth
         val drawableHeight = drawable.intrinsicHeight
-        val widthSize = View.MeasureSpec.getSize(widthMeasureSpec)
-        val widthMode = View.MeasureSpec.getMode(widthMeasureSpec)
-        val heightSize = View.MeasureSpec.getSize(heightMeasureSpec)
-        val heightMode = View.MeasureSpec.getMode(heightMeasureSpec)
+        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
+        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
+        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
+        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
         realSize.width = setViewSize(widthMode, widthSize, drawableWidth).toFloat()
         realSize.height = setViewSize(heightMode, heightSize, drawableHeight).toFloat()
 
@@ -412,7 +414,8 @@ class ZoomableImageView : ImageView {
         matchViewSize.width = viewSize.width - redundantXSpace
         matchViewSize.height = viewSize.height - redundantYSpace
 
-        if ((!isZoomed && !imageRenderedAtLeastOnce) || (prevMatchViewSize.width == 0.0f && prevMatchViewSize.height == 0.0f)) {
+        if ((!isZoomed && !imageRenderedAtLeastOnce)
+                || (prevMatchViewSize.width == 0.0f && prevMatchViewSize.height == 0.0f)) {
             imgMatrix.setScale(scaleX, scaleY)
             imgMatrix.postTranslate(redundantXSpace / 2, redundantYSpace / 2)
             currentZoom = 1.0f
@@ -428,11 +431,27 @@ class ZoomableImageView : ImageView {
 
             val prevActualWidth = prevMatchViewSize.width * currentZoom
             val actualWidth = imageWidth
-            translateMatrixAfterRotate(Matrix.MTRANS_X, transX, prevActualWidth, actualWidth, prevViewSize.width, viewSize.width, drawableWidth)
+            translateMatrixAfterRotate(
+                    axis = Matrix.MTRANS_X,
+                    trans = transX,
+                    prevImageSize = prevActualWidth,
+                    imageSize = actualWidth,
+                    prevViewSize = prevViewSize.width,
+                    viewSize = viewSize.width,
+                    drawableSize = drawableWidth
+            )
 
             val prevActualHeight = prevMatchViewSize.height * currentZoom
             val actualHeight = imageHeight
-            translateMatrixAfterRotate(Matrix.MTRANS_Y, transY, prevActualHeight, actualHeight, prevViewSize.height, viewSize.height, drawableHeight)
+            translateMatrixAfterRotate(
+                    axis = Matrix.MTRANS_Y,
+                    trans = transY,
+                    prevImageSize = prevActualHeight,
+                    imageSize = actualHeight,
+                    prevViewSize = prevViewSize.height,
+                    viewSize = viewSize.height,
+                    drawableSize = drawableHeight
+            )
 
             imgMatrix.setValues(matrix)
         }
@@ -441,24 +460,34 @@ class ZoomableImageView : ImageView {
     }
 
     private fun setViewSize(mode: Int, size: Int, drawableWidth: Int): Int {
-        val viewSize: Int
-        when (mode) {
-            View.MeasureSpec.EXACTLY -> viewSize = size
-            View.MeasureSpec.AT_MOST -> viewSize = Math.min(drawableWidth, size)
-            View.MeasureSpec.UNSPECIFIED -> viewSize = drawableWidth
-            else -> viewSize = size
+        return when (mode) {
+            MeasureSpec.EXACTLY -> size
+            MeasureSpec.AT_MOST -> Math.min(drawableWidth, size)
+            MeasureSpec.UNSPECIFIED -> drawableWidth
+            else -> size
         }
-        return viewSize
     }
 
-    private fun translateMatrixAfterRotate(axis: Int, trans: Float, prevImageSize: Float, imageSize: Float, prevViewSize: Float, viewSize: Float, drawableSize: Int) {
-        if (imageSize < viewSize) {
-            matrix[axis] = (viewSize - drawableSize * matrix[Matrix.MSCALE_X]) * 0.5f
-        } else if (trans > 0) {
-            matrix[axis] = -((imageSize - viewSize) / 2)
-        } else {
-            val percentage = (Math.abs(trans) + prevViewSize / 2) / prevImageSize
-            matrix[axis] = -(percentage * imageSize - viewSize / 2)
+    private fun translateMatrixAfterRotate(
+            axis: Int,
+            trans: Float,
+            prevImageSize: Float,
+            imageSize: Float,
+            prevViewSize: Float,
+            viewSize: Float,
+            drawableSize: Int
+    ) {
+        when {
+            imageSize < viewSize -> {
+                matrix[axis] = (viewSize - drawableSize * matrix[Matrix.MSCALE_X]) * 0.5f
+            }
+            trans > 0 -> {
+                matrix[axis] = -((imageSize - viewSize) / 2)
+            }
+            else -> {
+                val percentage = (Math.abs(trans) + prevViewSize / 2) / prevImageSize
+                matrix[axis] = -(percentage * imageSize - viewSize / 2)
+            }
         }
     }
 
@@ -481,7 +510,7 @@ class ZoomableImageView : ImageView {
         return true
     }
 
-    public fun getImageBounds(): RectF {
+    fun getImageBounds(): RectF {
         val drawable = drawable
         if (drawable == null || drawable.intrinsicWidth == 0 || drawable.intrinsicHeight == 0) {
             return RectF()
@@ -496,6 +525,7 @@ class ZoomableImageView : ImageView {
         return RectF(imageBounds)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         event.offsetLocation(-viewport.left, -viewport.top)
         scaleDetector.onTouchEvent(event)
@@ -647,7 +677,6 @@ class ZoomableImageView : ImageView {
             focusY: Float,
             private val stretchImageToSuper: Boolean) : Runnable {
 
-        private val ZOOM_TIME = 300f
         private val startTime: Long
         private val startZoom: Float
         private val bitmapX: Float
@@ -783,7 +812,7 @@ class ZoomableImageView : ImageView {
         override fun run() {
             imageMoveListener?.onMove()
 
-            if (scroller?.isFinished ?: false) {
+            if (scroller?.isFinished == true) {
                 scroller = null
                 return
             }
@@ -809,7 +838,7 @@ class ZoomableImageView : ImageView {
     private inner class CompatScroller(context: Context) {
 
         internal lateinit var scroller: Scroller
-        internal lateinit var overScroller: OverScroller
+        internal var overScroller: OverScroller
         internal var isPreGingerbread: Boolean = false
 
         val currX: Int
@@ -831,13 +860,8 @@ class ZoomableImageView : ImageView {
             }
 
         init {
-            if (VERSION.SDK_INT < VERSION_CODES.GINGERBREAD) {
-                isPreGingerbread = true
-                scroller = Scroller(context)
-            } else {
-                isPreGingerbread = false
-                overScroller = OverScroller(context)
-            }
+            isPreGingerbread = false
+            overScroller = OverScroller(context)
         }
 
         fun fling(startX: Int, startY: Int, velocityX: Int, velocityY: Int, minX: Int, maxX: Int, minY: Int, maxY: Int) {
@@ -858,19 +882,19 @@ class ZoomableImageView : ImageView {
 
         val isFinished: Boolean
             get() {
-                if (isPreGingerbread) {
-                    return scroller.isFinished
+                return if (isPreGingerbread) {
+                    scroller.isFinished
                 } else {
-                    return overScroller.isFinished
+                    overScroller.isFinished
                 }
             }
 
         fun computeScrollOffset(): Boolean {
-            if (isPreGingerbread) {
-                return scroller.computeScrollOffset()
+            return if (isPreGingerbread) {
+                scroller.computeScrollOffset()
             } else {
                 overScroller.computeScrollOffset()
-                return overScroller.computeScrollOffset()
+                overScroller.computeScrollOffset()
             }
         }
     }
@@ -883,7 +907,12 @@ class ZoomableImageView : ImageView {
         }
     }
 
-    private inner class ZoomVariables(var scale: Float, var focusX: Float, var focusY: Float, var scaleType: ImageView.ScaleType)
+    private inner class ZoomVariables(
+            var scale: Float,
+            var focusX: Float,
+            var focusY: Float,
+            var scaleType: ScaleType
+    )
 
     private fun printMatrixInfo() {
         val n = FloatArray(9)
@@ -949,3 +978,4 @@ class ZoomableImageView : ImageView {
 
 private const val SUPER_MIN_MULTIPLIER = .75f
 private const val SUPER_MAX_MULTIPLIER = 1.25f
+private const val ZOOM_TIME = 300f

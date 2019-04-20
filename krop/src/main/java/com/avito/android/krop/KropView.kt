@@ -8,7 +8,6 @@ import android.graphics.RectF
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
-import android.view.View
 import android.widget.FrameLayout
 
 class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
@@ -108,8 +107,8 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = View.MeasureSpec.getSize(widthMeasureSpec)
-        val height = View.MeasureSpec.getSize(heightMeasureSpec)
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        val height = MeasureSpec.getSize(heightMeasureSpec)
 
         calculateViewport(viewport, width, height, offset, aspectX, aspectY)
 

@@ -4,6 +4,7 @@ import android.graphics.RectF
 import com.avito.android.krop.SizeF
 import com.avito.android.krop.Transformation
 
+@Suppress("unused")
 fun Transformation.rotate(angle: Int) {
     when (angle) {
         0 -> {

@@ -23,7 +23,7 @@ class OverlayView(context: Context) : View(context) {
     }
 
     init {
-        setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
 
         clearPaint.color = Color.BLACK
         clearPaint.style = Paint.Style.FILL
@@ -31,8 +31,8 @@ class OverlayView(context: Context) : View(context) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = View.MeasureSpec.getSize(widthMeasureSpec)
-        val height = View.MeasureSpec.getSize(heightMeasureSpec)
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        val height = MeasureSpec.getSize(heightMeasureSpec)
 
         if (viewport.isEmpty) {
             with(viewport) {

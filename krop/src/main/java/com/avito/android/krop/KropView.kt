@@ -260,7 +260,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
             aspectY = source.readInt()
             overlayColor = source.readInt()
             overlayShape = source.readInt()
-            imageViewState = source.readParcelable(Parcelable::class.java.classLoader)
+            imageViewState = source.readParcelable(SavedState::class.java.classLoader)
         }
 
         companion object CREATOR : Parcelable.Creator<SavedState> {

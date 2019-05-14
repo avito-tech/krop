@@ -4,6 +4,7 @@ import android.graphics.RectF
 import android.os.Parcel
 import android.os.Parcelable
 
+@Suppress("unused")
 class Transformation(var size: SizeF = SizeF(), var crop: RectF = RectF()) : Parcelable {
 
     val isEmpty: Boolean

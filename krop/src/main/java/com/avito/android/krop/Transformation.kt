@@ -11,7 +11,7 @@ class Transformation(var size: SizeF = SizeF(), var crop: RectF = RectF()) : Par
         get() = crop.isEmpty
 
     fun forSize(size: SizeF): RectF {
-        val factor = this.size.width / size.width
+        val factor = size.width / this.size.width
         return RectF(
                 crop.left * factor,
                 crop.top * factor,

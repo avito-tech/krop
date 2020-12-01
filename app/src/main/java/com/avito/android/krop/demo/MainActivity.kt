@@ -21,9 +21,7 @@ import android.view.ViewTreeObserver
 import android.widget.*
 import com.avito.android.krop.KropView
 import com.squareup.picasso.Picasso
-import me.priyesh.chroma.ChromaDialog
-import me.priyesh.chroma.ColorMode
-import me.priyesh.chroma.ColorSelectListener
+import me.jfenn.colorpickerdialog.dialogs.ColorPickerDialog
 import java.io.InputStream
 
 
@@ -68,15 +66,9 @@ class MainActivity : AppCompatActivity() {
         kropView = findViewById(R.id.krop_view)
 
         pickColorButton.setOnClickListener {
-            ChromaDialog.Builder()
-                    .initialColor(Color.parseColor(inputOverlayColor.text.toString()))
-                    .colorMode(ColorMode.ARGB)
-                    .onColorSelected(listener = object : ColorSelectListener {
-                        override fun onColorSelected(color: Int) {
-                            setInputOverlayColor(color)
-                        }
-                    })
-                    .create()
+            ColorPickerDialog()
+                    .withColor(Color.parseColor(inputOverlayColor.text.toString()))
+                    .withListener { _, color -> setInputOverlayColor(color) }
                     .show(supportFragmentManager, getString(R.string.select_color))
         }
 

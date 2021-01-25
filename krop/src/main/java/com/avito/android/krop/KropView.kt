@@ -65,6 +65,14 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         imageView.setZoom(scale)
     }
 
+    fun setMaxScale(scale: Float) {
+        imageView.maxZoom = scale
+    }
+
+    fun setMinScale(scale: Float) {
+        imageView.minZoom = scale
+    }
+
     fun setBitmap(bitmap: Bitmap) {
         this.bitmap = bitmap
         imageView.setImageBitmap(bitmap)

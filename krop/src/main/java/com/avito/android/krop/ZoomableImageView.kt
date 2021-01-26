@@ -143,10 +143,10 @@ class ZoomableImageView : ImageView {
         imgMatrix = Matrix()
         prevMatrix = Matrix()
         matrix = FloatArray(9)
-        currentZoom = 1.0f
+        currentZoom = DEFAULT_MIN_ZOOM
         imageScaleType = ScaleType.CENTER_CROP
-        minScale = 1.0f
-        maxScale = 5.0f
+        minScale = DEFAULT_MIN_ZOOM
+        maxScale = DEFAULT_MAX_ZOOM
         superMinScale = SUPER_MIN_MULTIPLIER * minScale
         superMaxScale = SUPER_MAX_MULTIPLIER * maxScale
         imageMatrix = imgMatrix
@@ -976,6 +976,8 @@ class ZoomableImageView : ImageView {
 
 }
 
+private const val DEFAULT_MIN_ZOOM = 1f
+private const val DEFAULT_MAX_ZOOM = 5f
 private const val SUPER_MIN_MULTIPLIER = .75f
 private const val SUPER_MAX_MULTIPLIER = 1.25f
 private const val ZOOM_TIME = 300f

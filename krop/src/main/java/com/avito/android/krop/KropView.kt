@@ -65,9 +65,31 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         imageView.setZoom(scale)
     }
 
+    fun setMaxScale(scale: Float) {
+        imageView.maxZoom = scale
+    }
+
+    fun setMinScale(scale: Float) {
+        imageView.minZoom = scale
+    }
+
     fun setBitmap(bitmap: Bitmap) {
         this.bitmap = bitmap
         imageView.setImageBitmap(bitmap)
+    }
+
+    fun setTransformation(transformation: Transformation) {
+        with(transformation) {
+            val scale = if (size.height > size.width) {
+                size.width / (crop.right - crop.left)
+            } else {
+                size.height / (crop.bottom - crop.top)
+            }
+            val focusX = (crop.right + crop.left) / (2 * size.width)
+            val focusY = (crop.bottom + crop.top) / (2 * size.height)
+
+            imageView.setZoom(scale = scale, focusX = focusX, focusY = focusY)
+        }
     }
 
     fun getTransformation(): Transformation {

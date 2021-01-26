@@ -32,6 +32,11 @@ class SizeF(var width: Float = 0.0f, var height: Float = 0.0f) : Parcelable {
         return 0
     }
 
+    override fun toString(): String {
+        return "SizeF(width=$widthInt, height=$heightInt)"
+    }
+
+
     companion object CREATOR : Parcelable.Creator<SizeF> {
         override fun createFromParcel(parcel: Parcel): SizeF {
             return SizeF(parcel)

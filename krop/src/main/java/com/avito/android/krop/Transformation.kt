@@ -33,6 +33,10 @@ class Transformation(var size: SizeF = SizeF(), var crop: RectF = RectF()) : Par
         return 0
     }
 
+    override fun toString(): String {
+        return "Transformation(size=$size, crop=$crop)"
+    }
+
     companion object CREATOR : Parcelable.Creator<Transformation> {
         override fun createFromParcel(parcel: Parcel): Transformation {
             return Transformation(parcel)

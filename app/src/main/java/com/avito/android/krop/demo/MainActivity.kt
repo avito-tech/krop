@@ -1,5 +1,6 @@
 package com.avito.android.krop.demo
 
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -8,18 +9,23 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import androidx.annotation.ColorInt
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.snackbar.Snackbar
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewTreeObserver
-import android.widget.*
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.RadioGroup
+import android.widget.SeekBar
+import android.widget.ViewFlipper
+import androidx.annotation.ColorInt
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import com.avito.android.krop.KropView
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 import me.jfenn.colorpickerdialog.dialogs.ColorPickerDialog
 import java.io.InputStream
@@ -32,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cropContainer: ViewFlipper
     private lateinit var kropView: KropView
     private lateinit var resultImage: ImageView
+    private lateinit var inputRotationAngle: EditText
     private lateinit var inputOffset: SeekBar
     private lateinit var inputAspectX: SeekBar
     private lateinit var inputAspectY: SeekBar
@@ -61,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         inputAspectY = findViewById(R.id.input_aspect_y)
         pickColorButton = findViewById(R.id.pick_color_button)
         inputOverlayColor = findViewById(R.id.input_overlay_color)
+        inputRotationAngle = findViewById(R.id.input_rotation_angle)
         overlayShape = findViewById(R.id.overlay_shape)
 
         kropView = findViewById(R.id.krop_view)
@@ -115,7 +123,7 @@ class MainActivity : AppCompatActivity() {
                     .load("file:///android_asset/default_image.jpg")
                     .error(R.drawable.image)
                     .centerInside()
-                    .resize(1024, 1024)
+                    .resize(4000, 4000)
                     .config(Bitmap.Config.RGB_565)
                     .into(target)
         } else {
@@ -169,6 +177,10 @@ class MainActivity : AppCompatActivity() {
             R.id.menu_select -> {
                 selectPicture()
                 return true
+            }
+            R.id.rotate -> {
+                val angle = inputRotationAngle.text.toString().toFloatOrNull()
+                if (angle != null) rotate(angle)
             }
             R.id.menu_apply -> {
                 applySettings()
@@ -229,6 +241,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun rotate(angle: Float) {
+
+        var fromAngle = 0f
+        ValueAnimator.ofFloat(fromAngle, angle).apply {
+            duration = ROTATION_DURATION_MS
+            addUpdateListener { updatedAnimation ->
+                val value = updatedAnimation.animatedValue as Float
+                val diff = value - fromAngle
+                fromAngle = value
+                kropView.rotateBy(diff)
+            }
+            start()
+        }
+    }
+
     private fun showCrop() {
         viewFlipper.displayedChild = 0
         invalidateOptionsMenu()
@@ -252,3 +279,4 @@ class MainActivity : AppCompatActivity() {
 
 private const val REQUEST_PICK_IMAGE: Int = 42
 private const val KEY_URI = "key_uri"
+private const val ROTATION_DURATION_MS = 400L

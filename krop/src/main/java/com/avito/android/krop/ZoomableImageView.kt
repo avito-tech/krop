@@ -23,6 +23,17 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.OverScroller
 import android.widget.Scroller
+import com.avito.android.krop.util.KLine
+import com.avito.android.krop.util.KPoint
+import com.avito.android.krop.util.KRect
+import com.avito.android.krop.util.SizeF
+import com.avito.android.krop.util.Transformation
+import java.lang.Math.toRadians
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.sign
+import kotlin.math.sin
 
 /*
  * ZoomableImageView allows you to zoom and move bitmap on view with touch effects
@@ -56,9 +67,10 @@ class ZoomableImageView : ImageView {
     private var onDrawReady: Boolean = false
 
     private var delayedZoomVariables: ZoomVariables? = null
+    private var delayedTransformation: Transformation? = null
 
     private var realSize = SizeF()
-    private var viewSize = SizeF()
+    private var viewSize = SizeF() // Viewport size
     private var prevViewSize = SizeF()
 
     private var matchViewSize = SizeF()
@@ -90,6 +102,9 @@ class ZoomableImageView : ImageView {
             point.y /= drawableHeight.toFloat()
             return point
         }
+
+    internal var rotationAngle: Float = NO_ROTATION_ANGLE
+        private set
 
     var currentZoom: Float = 0.0f
         private set
@@ -214,6 +229,9 @@ class ZoomableImageView : ImageView {
         return SavedState(
                 superState,
                 currentZoom,
+                rotationAngle,
+                maxZoom,
+                minZoom,
                 matrix,
                 matchViewSize,
                 viewSize,
@@ -225,6 +243,9 @@ class ZoomableImageView : ImageView {
         if (state is SavedState) {
             super.onRestoreInstanceState(state.superState)
             currentZoom = state.currentZoom
+            rotationAngle = state.rotationAngle
+            maxZoom = state.maxZoom
+            minZoom = state.minZoom
             matrix = state.matrix
             prevMatchViewSize = state.prevMatchViewSize
             prevViewSize = state.prevViewSize
@@ -234,108 +255,6 @@ class ZoomableImageView : ImageView {
         } else {
             super.onRestoreInstanceState(state)
         }
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        onDrawReady = true
-        imageRenderedAtLeastOnce = true
-        delayedZoomVariables?.let {
-            setZoom(it.scale, it.focusX, it.focusY, it.scaleType)
-            delayedZoomVariables = null
-        }
-        super.onDraw(canvas)
-    }
-
-    public override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        savePreviousImageValues()
-    }
-
-    fun resetZoom() {
-        currentZoom = 1f
-        fitImageToView()
-    }
-
-    @JvmOverloads
-    fun setZoom(scale: Float,
-                focusX: Float = 0.5f,
-                focusY: Float = 0.5f,
-                scaleType: ScaleType = imageScaleType) {
-        if (!onDrawReady) {
-            delayedZoomVariables = ZoomVariables(scale, focusX, focusY, scaleType)
-            return
-        }
-        if (scaleType != imageScaleType) {
-            setScaleType(scaleType)
-        }
-        resetZoom()
-        scaleImage(deltaScale = scale.toDouble(), focusX = viewSize.width / 2, focusY = viewSize.height / 2, stretchImageToSuper = true)
-        imgMatrix.getValues(matrix)
-        matrix[Matrix.MTRANS_X] = -(focusX * imageWidth - viewSize.width / 2)
-        matrix[Matrix.MTRANS_Y] = -(focusY * imageHeight - viewSize.height / 2)
-        imgMatrix.setValues(matrix)
-        fixTrans()
-        imageMatrix = imgMatrix
-    }
-
-    fun setZoom(img: ZoomableImageView) {
-        img.scrollPosition?.let { center ->
-            setZoom(img.currentZoom, center.x, center.y, img.scaleType)
-        }
-    }
-
-    fun setScrollPosition(focusX: Float, focusY: Float) {
-        setZoom(currentZoom, focusX, focusY)
-    }
-
-    private fun fixTrans() {
-        imgMatrix.getValues(matrix)
-        val transX = matrix[Matrix.MTRANS_X]
-        val transY = matrix[Matrix.MTRANS_Y]
-
-        val fixTransX = getFixTrans(transX, viewSize.width, imageWidth)
-        val fixTransY = getFixTrans(transY, viewSize.height, imageHeight)
-
-        if (fixTransX != 0.0f || fixTransY != 0.0f) {
-            imgMatrix.postTranslate(fixTransX, fixTransY)
-        }
-    }
-
-    private fun fixScaleTrans() {
-        fixTrans()
-        imgMatrix.getValues(matrix)
-        if (imageWidth < viewSize.width) {
-            matrix[Matrix.MTRANS_X] = (viewSize.width - imageWidth) / 2
-        }
-        if (imageHeight < viewSize.height) {
-            matrix[Matrix.MTRANS_Y] = (viewSize.height - imageHeight) / 2
-        }
-        imgMatrix.setValues(matrix)
-    }
-
-    private fun getFixTrans(trans: Float, viewSize: Float, contentSize: Float): Float {
-        val minTrans: Float
-        val maxTrans: Float
-
-        if (contentSize <= viewSize) {
-            minTrans = 0.0f
-            maxTrans = viewSize - contentSize
-        } else {
-            minTrans = viewSize - contentSize
-            maxTrans = 0.0f
-        }
-
-        if (trans < minTrans) return -trans + minTrans
-        if (trans > maxTrans) return -trans + maxTrans
-
-        return 0.0f
-    }
-
-    private fun getFixDragTrans(delta: Float, viewSize: Float, contentSize: Float): Float {
-        if (contentSize <= viewSize) {
-            return 0.0f
-        }
-        return delta
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -371,6 +290,344 @@ class ZoomableImageView : ImageView {
         setPadding(rect.left.toInt(), rect.top.toInt(), rect.right.toInt(), rect.bottom.toInt())
 
         fitImageToView()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        onDrawReady = true
+        imageRenderedAtLeastOnce = true
+        delayedZoomVariables?.let {
+            setZoom(it.scale, it.focusX, it.focusY, it.scaleType)
+            delayedZoomVariables = null
+        }
+        delayedTransformation?.let {
+            setTransformation(it)
+            delayedTransformation = null
+        }
+        super.onDraw(canvas)
+    }
+
+    public override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        savePreviousImageValues()
+    }
+
+    fun resetZoom() {
+        currentZoom = DEFAULT_MIN_ZOOM
+        fitImageToView()
+    }
+
+    @JvmOverloads
+    fun setZoom(scale: Float,
+                focusX: Float = 0.5f,
+                focusY: Float = 0.5f,
+                scaleType: ScaleType = imageScaleType
+    ) {
+        if (!onDrawReady) {
+            delayedZoomVariables = ZoomVariables(scale, focusX, focusY, scaleType)
+            return
+        }
+        if (scaleType != imageScaleType) {
+            setScaleType(scaleType)
+        }
+        resetZoom()
+        scaleImage(deltaScale = scale.toDouble(), focusX = viewSize.width / 2, focusY = viewSize.height / 2, stretchImageToSuper = true)
+        imgMatrix.getValues(matrix)
+        matrix[Matrix.MTRANS_X] = -(focusX * imageWidth - viewSize.width / 2)
+        matrix[Matrix.MTRANS_Y] = -(focusY * imageHeight - viewSize.height / 2)
+        imgMatrix.setValues(matrix)
+        fixTrans()
+        imageMatrix = imgMatrix
+    }
+
+    /**
+     * @param angle clockwise angle for rotation
+     */
+    fun rotateBy(angle: Float) {
+
+        if (angle == NO_ROTATION_ANGLE) return
+
+        val bounds = getCurrentBounds()?.center() ?: return
+        val centeredMatrix = Matrix(imgMatrix).apply {
+            postTranslate(-bounds.x, -bounds.y)
+        }
+        centeredMatrix.postRotate(angle)
+        val correction = getBounds(centeredMatrix)!!.center()
+
+        imgMatrix.postTranslate(-viewport.centerX(), -viewport.centerY())
+        imgMatrix.postRotate(angle)
+        imgMatrix.postTranslate(
+                viewport.centerX() - correction.x,
+                viewport.centerY() - correction.y
+        )
+        rotationAngle = (rotationAngle + angle) % 360
+
+        fixZoomAfterRotation()
+        imageMatrix = imgMatrix
+
+        imageMoveListener?.onMove()
+    }
+
+    fun setZoom(img: ZoomableImageView) {
+        img.scrollPosition?.let { center ->
+            setZoom(img.currentZoom, center.x, center.y, img.scaleType)
+        }
+    }
+
+    fun setScrollPosition(focusX: Float, focusY: Float) {
+        setZoom(currentZoom, focusX, focusY)
+    }
+
+    fun getTransformation(): Transformation {
+        val offset = getFocusOffset()
+
+        return Transformation(
+                scale = currentZoom,
+                focusOffset = PointF(offset.x, offset.y),
+                rotationAngle = rotationAngle
+        )
+    }
+
+    fun setTransformation(transformation: Transformation) {
+        if (!onDrawReady) {
+            delayedTransformation = transformation
+            return
+        }
+
+        with(transformation) {
+            setZoom(scale = scale)
+            rotateBy(rotationAngle)
+            moveFocusBy(focusOffset.x, focusOffset.y)
+        }
+
+    }
+
+    private fun moveFocusBy(dx: Float, dy: Float) {
+        imgMatrix.postTranslate(dx, dy)
+        imageMatrix = imgMatrix
+    }
+
+    private fun fixZoomAfterRotation() {
+        val image = getCurrentBounds() ?: return
+
+        // No need to zoom in, if viewport already inside image
+        if (image.contains(viewport.toKRect())) {
+            tryFixMinScale()
+            return
+        }
+
+        val viewportCenter = KPoint(viewport.centerX(), viewport.centerY())
+        val diagonals = listOf(
+                KLine(viewportCenter, KPoint(viewport.left, viewport.top)),
+                KLine(viewportCenter, KPoint(viewport.left, viewport.bottom)),
+                KLine(viewportCenter, KPoint(viewport.right, viewport.top)),
+                KLine(viewportCenter, KPoint(viewport.right, viewport.bottom))
+        )
+
+        val borders = image.clockwiseBorders()
+        val intersections = mutableListOf<Pair<KPoint, KLine>>()
+
+        // If any viewport diagonal has intersection with image's border, we need an upscaling then
+        diagonals.forEach { diag ->
+            borders.forEach { border ->
+                diag.findIntersection(border)?.let {
+                    intersections.add(it to diag)
+                }
+            }
+        }
+
+        val scale = intersections.map { (intersection, diag) ->
+            val shortenDiag = KLine(viewportCenter, intersection)
+            diag.length() / shortenDiag.length()
+        }.max()?.takeIf { it > UPSCALING_ROTATION_THRESHOLD }
+        scale?.let { deltaScale ->
+            scaleImage(deltaScale.toDouble(), pivotX, pivotY, stretchImageToSuper = false)
+            minZoom = currentZoom
+
+            fixTrans()
+        }
+    }
+
+    private fun tryFixMinScale() {
+        val image = getCurrentBounds() ?: return
+
+        if (!image.contains(viewport.toKRect())) return
+
+        fun KLine.getVectorDistantPoint(): KPoint {
+            val distantPoint = max(imageWidth, imageHeight) // some max value to be out of image bounds
+            val dx = p2.x - p1.x
+            if (dx == 0f) return KPoint(p1.x, distantPoint) // fallback, we don't expect it
+            val k = (p2.y - p1.y) / dx
+            val newX = distantPoint * sign(dx)
+            val newY = newX * k
+            return KPoint(p1.x + newX, p1.y + newY)
+        }
+
+        val viewportCenter = KPoint(viewport.centerX(), viewport.centerY())
+        val diagonals = listOf(
+                KLine(viewportCenter, KPoint(viewport.left, viewport.top)),
+                KLine(viewportCenter, KPoint(viewport.left, viewport.bottom)),
+                KLine(viewportCenter, KPoint(viewport.right, viewport.top)),
+                KLine(viewportCenter, KPoint(viewport.right, viewport.bottom))
+        ).map { it.p2 to KLine(it.p1, it.getVectorDistantPoint()) } // convert them into outgoing vectors
+
+        val borders = image.clockwiseBorders()
+        val intersections = mutableListOf<Pair<KPoint, KLine>>()
+
+        diagonals.forEach { (height, diag) ->
+            borders.forEach { border ->
+                diag.findIntersection(border)?.let {
+                    intersections.add(height to KLine(viewportCenter, it))
+                }
+            }
+        }
+
+        // Iterate over intersections with image's border, might we can lower minScale
+        val scale = intersections.map { (height, diag) ->
+            val shortenDiag = KLine(viewportCenter, height)
+            diag.length() / shortenDiag.length()
+        }.min()?.takeIf { it > UPSCALING_ROTATION_THRESHOLD }
+        scale?.let {
+            val newMinScale = max(currentZoom / scale, DEFAULT_MIN_ZOOM)
+            minZoom = newMinScale
+        }
+    }
+
+    private fun removeExtraTrans() {
+        imgMatrix.getValues(matrix)
+        val transX = matrix[Matrix.MTRANS_X]
+        val transY = matrix[Matrix.MTRANS_Y]
+
+        val fixTransX = getFixTrans(transX, viewSize.width, imageWidth)
+        val fixTransY = getFixTrans(transY, viewSize.height, imageHeight)
+
+        if (fixTransX != 0.0f || fixTransY != 0.0f) {
+            imgMatrix.postTranslate(fixTransX, fixTransY)
+        }
+    }
+
+    private fun fixTrans() {
+
+        if (rotationAngle == NO_ROTATION_ANGLE) { // just use simple method
+            removeExtraTrans()
+        } else {
+            val image = getCurrentBounds() ?: return
+            val viewportRect = viewport.toKRect()
+            if (image.contains(viewportRect)) return // viewport inside image, no need to fix
+
+            val viewportCenter = viewportRect.center()
+            val imageCenter = image.center()
+            val centeredPort = viewportRect
+                    .moveBy(imageCenter.x - viewportCenter.x, imageCenter.y - viewportCenter.y)
+
+            val borders = image.clockwiseBorders()
+
+            val viewportHeights = centeredPort.clockwiseHeights()
+            // We need a start point for rectangle traverse
+            // Use any of sides to find nearest point
+            val nearestVertical = viewportHeights.map { borders.last().normalFrom(it) }.minBy { it.length() }!!
+
+            // Rotate heights to support clockwise order of borders
+            val nextNearestIndex = viewportHeights.indexOf(nearestVertical.p1) + 1
+            var heightsQueue = mutableListOf<KPoint>()
+            if (nextNearestIndex != viewportHeights.size) {
+                heightsQueue.addAll(viewportHeights.subList(nextNearestIndex, viewportHeights.size))
+            }
+            heightsQueue.addAll(viewportHeights.subList(0, nextNearestIndex))
+
+            check(heightsQueue.size == borders.size) { "Expected borders and heights sets to be same size" }
+
+            fun KPoint.followLine(vector: KLine): KPoint {
+                val (dx, dy) = vector.getTransition()
+                return moveBy(dx, dy)
+            }
+
+            var tempCenter = centeredPort.center().followLine(nearestVertical)
+            heightsQueue = heightsQueue.map { it.followLine(nearestVertical) }.toMutableList()
+
+            val availabilityBorders = mutableListOf<KLine>()
+
+            // Iterate on borders: forming "areas of gravity" for viewport center
+            var lastPoint: KPoint? = null
+            borders.forEach { border ->
+                val height = heightsQueue.removeAt(0)
+                val normal = border.normalFrom(height)
+
+                tempCenter = tempCenter.followLine(normal)
+                heightsQueue = heightsQueue.map { it.followLine(normal) }.toMutableList()
+
+                lastPoint?.let {
+                    availabilityBorders.add(KLine(it, tempCenter))
+                }
+                lastPoint = tempCenter
+            }
+            lastPoint?.let { availabilityBorders.add(KLine(it, availabilityBorders.first().p1)) }
+
+            // Find nearest point to go for
+            val nearestPivot = availabilityBorders
+                    .map { it.nearestPointFor(viewportCenter) }
+                    .minBy { KLine(it, viewportCenter).length() }
+            nearestPivot?.let {
+                val dx = viewportCenter.x - it.x
+                val dy = viewportCenter.y - it.y
+                imgMatrix.postTranslate(dx, dy)
+            }
+        }
+    }
+
+    private fun RectF.toKRect() = KRect(
+            leftTop = KPoint(left, top),
+            rightTop = KPoint(right, top),
+            leftBottom = KPoint(left, bottom),
+            rightBottom = KPoint(right, bottom)
+    )
+
+    /**
+     * Returns offset required to get to focus point from image's center
+     */
+    private fun getFocusOffset() : KPoint {
+        val imageCenter = getCurrentBounds()?.center() ?: KPoint(viewport.centerX(), viewport.centerY())
+        val dx = imageCenter.x - viewport.centerX()
+        val dy = imageCenter.y - viewport.centerY()
+        return KPoint(dx, dy)
+    }
+
+    private fun fixScaleTrans() {
+        fixTrans()
+        // We do translations for rotated images in other place
+        if (rotationAngle != NO_ROTATION_ANGLE) return
+        imgMatrix.getValues(matrix)
+        if (imageWidth < viewSize.width) {
+            matrix[Matrix.MTRANS_X] = (viewSize.width - imageWidth) / 2
+        }
+        if (imageHeight < viewSize.height) {
+            matrix[Matrix.MTRANS_Y] = (viewSize.height - imageHeight) / 2
+        }
+        imgMatrix.setValues(matrix)
+    }
+
+    private fun getFixTrans(trans: Float, viewSize: Float, contentSize: Float): Float {
+        val minTrans: Float
+        val maxTrans: Float
+
+        if (contentSize <= viewSize) {
+            minTrans = 0.0f
+            maxTrans = viewSize - contentSize
+        } else {
+            minTrans = viewSize - contentSize
+            maxTrans = 0.0f
+        }
+
+        if (trans < minTrans) return -trans + minTrans
+        if (trans > maxTrans) return -trans + maxTrans
+
+        return 0.0f
+    }
+
+    private fun getFixDragTrans(delta: Float, viewSize: Float, contentSize: Float): Float {
+        if (contentSize <= viewSize) {
+            return 0.0f
+        }
+        return delta
     }
 
     private fun fitImageToView() {
@@ -418,7 +675,8 @@ class ZoomableImageView : ImageView {
                 || (prevMatchViewSize.width == 0.0f && prevMatchViewSize.height == 0.0f)) {
             imgMatrix.setScale(scaleX, scaleY)
             imgMatrix.postTranslate(redundantXSpace / 2, redundantYSpace / 2)
-            currentZoom = 1.0f
+            currentZoom = DEFAULT_MIN_ZOOM
+            rotationAngle = NO_ROTATION_ANGLE
         } else {
 
             prevMatrix.getValues(matrix)
@@ -503,18 +761,19 @@ class ZoomableImageView : ImageView {
             return false
         } else if (x >= -1 && direction < 0) {
             return false
-        } else if (Math.abs(x) + viewSize.width + 1f >= imageWidth && direction > 0) {
+        } else if (abs(x) + viewSize.width + 1f >= imageWidth && direction > 0) {
             return false
         }
 
         return true
     }
 
-    fun getImageBounds(): RectF {
+    internal fun getImageBounds(): RectF {
         val drawable = drawable
         if (drawable == null || drawable.intrinsicWidth == 0 || drawable.intrinsicHeight == 0) {
             return RectF()
         }
+
         val drawableWidth = drawable.intrinsicWidth
         val drawableHeight = drawable.intrinsicHeight
 
@@ -523,6 +782,35 @@ class ZoomableImageView : ImageView {
         realImageBounds.set(0.0f, 0.0f, drawableWidth.toFloat(), drawableHeight.toFloat())
         imageMatrix.mapRect(imageBounds, realImageBounds)
         return RectF(imageBounds)
+    }
+
+    private fun getDisplayedBounds() = getBounds(imageMatrix)
+
+    // Returns bounds, stored in cache. May contain changes, that's not yet displayed
+    private fun getCurrentBounds() = getBounds(imgMatrix)
+
+    private fun getBounds(imageMatrix: Matrix): KRect? {
+        val drawable = drawable
+        if (drawable == null || drawable.intrinsicWidth == 0 || drawable.intrinsicHeight == 0) {
+            return null
+        }
+        val drawableWidth = drawable.intrinsicWidth
+        val drawableHeight = drawable.intrinsicHeight
+
+        //original image coords
+        val points = floatArrayOf(
+                0f, 0f,  //left, top
+                drawableWidth.toFloat(), 0f,  //right, top
+                drawableWidth.toFloat(), drawableHeight.toFloat(),  //right, bottom
+                0f, drawableHeight.toFloat() //left, bottom
+        )
+        imageMatrix.mapPoints(points)
+        return KRect(
+                leftTop = KPoint(points[0] + paddingLeft, points[1] + paddingTop),
+                rightTop = KPoint(points[2] + paddingRight, points[3] + paddingTop),
+                rightBottom = KPoint(points[4] + paddingRight, points[5] + paddingBottom),
+                leftBottom = KPoint(points[6] + paddingLeft, points[7] + paddingBottom)
+        )
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -545,8 +833,10 @@ class ZoomableImageView : ImageView {
                     val deltaY = curr.y - lastMovePoint.y
                     val fixTransX = getFixDragTrans(deltaX, viewSize.width, imageWidth)
                     val fixTransY = getFixDragTrans(deltaY, viewSize.height, imageHeight)
-                    imgMatrix.postTranslate(fixTransX, fixTransY)
-                    fixTrans()
+                    if (fixTransX != 0.0f || fixTransY != 0.0f) {
+                        imgMatrix.postTranslate(fixTransX, fixTransY)
+                        fixTrans()
+                    }
                     lastMovePoint.set(curr.x, curr.y)
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
@@ -620,6 +910,7 @@ class ZoomableImageView : ImageView {
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             scaleImage(detector.scaleFactor.toDouble(), detector.focusX, detector.focusY, true)
+            tryFixMinScale()
             imageMoveListener?.onMove()
             return true
         }
@@ -671,7 +962,7 @@ class ZoomableImageView : ImageView {
         fixScaleTrans()
     }
 
-    private inner class DoubleTapZoom internal constructor(
+    private inner class DoubleTapZoom(
             private val targetZoom: Float,
             focusX: Float,
             focusY: Float,
@@ -763,11 +1054,11 @@ class ZoomableImageView : ImageView {
         return PointF(finalX, finalY)
     }
 
-    private inner class Fling internal constructor(velocityX: Int, velocityY: Int) : Runnable {
+    private inner class Fling(velocityX: Int, velocityY: Int) : Runnable {
 
-        internal var scroller: CompatScroller? = null
-        internal var currX: Int = 0
-        internal var currY: Int = 0
+        var scroller: CompatScroller? = null
+        var currX: Int = 0
+        var currY: Int = 0
 
         init {
             state = State.FLING
@@ -781,17 +1072,36 @@ class ZoomableImageView : ImageView {
             val minY: Int
             val maxY: Int
 
+            val sinalpha = sin(toRadians(rotationAngle.toDouble()))
+            val cosalpha = cos(toRadians(rotationAngle.toDouble()))
+
             if (imageWidth > viewSize.width) {
-                minX = (viewSize.width - imageWidth).toInt()
-                maxX = 0
+                val widthWeight = -imageWidth * cosalpha
+                val minWidthWeight = widthWeight.takeIf { cosalpha > 0 } ?: 0.0
+                val maxWidthWeight = widthWeight.takeIf { cosalpha < 0 } ?: 0.0
+
+                val heightWeight = imageHeight * sinalpha
+                val minHeightWeight = heightWeight.takeIf { sinalpha < 0 } ?: 0.0
+                val maxHeightWeight = heightWeight.takeIf { sinalpha > 0 } ?: 0.0
+
+                minX = (viewSize.width + minWidthWeight + minHeightWeight).toInt()
+                maxX = (imageWidth + maxWidthWeight + maxHeightWeight).toInt()
             } else {
                 maxX = startX
                 minX = maxX
             }
 
             if (imageHeight > viewSize.height) {
-                minY = (viewSize.height - imageHeight).toInt()
-                maxY = 0
+                val heightWeight = -imageHeight * cosalpha
+                val minHeightWeight = heightWeight.takeIf { cosalpha > 0 } ?: 0.0
+                val maxHeightWeight = heightWeight.takeIf { cosalpha < 0 } ?: 0.0
+
+                val widthWeight = -imageWidth * sinalpha
+                val minWidthWeight = widthWeight.takeIf { sinalpha > 0 } ?: 0.0
+                val maxWidthWeight = widthWeight.takeIf { sinalpha < 0 } ?: 0.0
+
+                minY = (viewSize.height + minWidthWeight + minHeightWeight).toInt()
+                maxY = (imageHeight + maxWidthWeight + maxHeightWeight).toInt()
             } else {
                 maxY = startY
                 minY = maxY
@@ -837,9 +1147,9 @@ class ZoomableImageView : ImageView {
     @TargetApi(VERSION_CODES.GINGERBREAD)
     private inner class CompatScroller(context: Context) {
 
-        internal lateinit var scroller: Scroller
-        internal var overScroller: OverScroller
-        internal var isPreGingerbread: Boolean = false
+        lateinit var scroller: Scroller
+        var overScroller: OverScroller
+        var isPreGingerbread: Boolean = false
 
         val currX: Int
             get() {
@@ -907,21 +1217,19 @@ class ZoomableImageView : ImageView {
         }
     }
 
-    private inner class ZoomVariables(
-            var scale: Float,
-            var focusX: Float,
-            var focusY: Float,
-            var scaleType: ScaleType
+    private data class ZoomVariables(
+            val scale: Float,
+            val focusX: Float,
+            val focusY: Float,
+            val scaleType: ScaleType
     )
-
-    private fun printMatrixInfo() {
-        val n = FloatArray(9)
-        imgMatrix.getValues(n)
-    }
 
     class SavedState : BaseSavedState {
 
         val currentZoom: Float
+        val rotationAngle: Float
+        val maxZoom: Float
+        val minZoom: Float
         val matrix: FloatArray
         val prevMatchViewSize: SizeF
         val prevViewSize: SizeF
@@ -929,11 +1237,17 @@ class ZoomableImageView : ImageView {
 
         constructor(superState: Parcelable,
                     currentZoom: Float,
+                    rotationAngle: Float,
+                    maxZoom: Float,
+                    minZoom: Float,
                     matrix: FloatArray,
                     prevMatchViewSize: SizeF,
                     prevViewSize: SizeF,
                     imageRenderedAtLeastOnce: Boolean) : super(superState) {
             this.currentZoom = currentZoom
+            this.rotationAngle = rotationAngle
+            this.maxZoom = maxZoom
+            this.minZoom = minZoom
             this.matrix = matrix
             this.prevMatchViewSize = prevMatchViewSize
             this.prevViewSize = prevViewSize
@@ -942,6 +1256,9 @@ class ZoomableImageView : ImageView {
 
         constructor(source: Parcel) : super(source) {
             currentZoom = source.readFloat()
+            rotationAngle = source.readFloat()
+            maxZoom = source.readFloat()
+            minZoom = source.readFloat()
             matrix = source.createFloatArray()
             prevMatchViewSize = source.readParcelable(SizeF::class.java.classLoader)
             prevViewSize = source.readParcelable(SizeF::class.java.classLoader)
@@ -966,6 +1283,9 @@ class ZoomableImageView : ImageView {
             super.writeToParcel(out, flags)
             with(out) {
                 writeFloat(currentZoom)
+                writeFloat(rotationAngle)
+                writeFloat(maxZoom)
+                writeFloat(minZoom)
                 writeFloatArray(matrix)
                 writeParcelable(prevMatchViewSize, flags)
                 writeParcelable(prevViewSize, flags)
@@ -981,3 +1301,5 @@ private const val DEFAULT_MAX_ZOOM = 5f
 private const val SUPER_MIN_MULTIPLIER = .75f
 private const val SUPER_MAX_MULTIPLIER = 1.25f
 private const val ZOOM_TIME = 300f
+private const val UPSCALING_ROTATION_THRESHOLD = 1f
+private const val NO_ROTATION_ANGLE = 0f

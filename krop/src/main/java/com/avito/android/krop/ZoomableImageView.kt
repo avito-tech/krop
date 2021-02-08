@@ -46,6 +46,11 @@ class ZoomableImageView : ImageView {
         NONE, DRAG, ZOOM, FLING, ANIMATE_ZOOM
     }
 
+    //
+    // Matrix applied to image. MSCALE_X and MSCALE_Y should always be equal.
+    // MTRANS_X and MTRANS_Y are the other values used. prevMatrix is the matrix
+    // saved prior to the screen rotating.
+    //
     private lateinit var imgMatrix: Matrix
     private lateinit var prevMatrix: Matrix
 
@@ -70,9 +75,14 @@ class ZoomableImageView : ImageView {
     private var delayedTransformation: Transformation? = null
 
     private var realSize = SizeF()
+    //
+    // Size of view and previous view size (ie before rotation)
+    //
     private var viewSize = SizeF() // Viewport size
     private var prevViewSize = SizeF()
-
+    //
+    // Size of image when it is stretched to fit view. Before and After rotation.
+    //
     private var matchViewSize = SizeF()
     private var prevMatchViewSize = SizeF()
 
@@ -91,6 +101,14 @@ class ZoomableImageView : ImageView {
 
     var viewport = RectF()
 
+    /**
+     * Return the point at the center of the zoomed image. The PointF coordinates range
+     * in value between 0 and 1 and the focus point is denoted as a fraction from the left
+     * and top of the view. For example, the top left corner of the image would be (0, 0).
+     * And the bottom right corner would be (1, 1).
+     *
+     * @return PointF representing the scroll position of the zoomed image.
+     */
     val scrollPosition: PointF?
         get() {
             val drawable = drawable ?: return null
@@ -106,12 +124,24 @@ class ZoomableImageView : ImageView {
     internal var rotationAngle: Float = NO_ROTATION_ANGLE
         private set
 
+    //
+    // Scale of image ranges from minScale to maxScale, where minScale == 1
+    // when the image is stretched to fit view.
+    //
     var currentZoom: Float = 0.0f
         private set
 
+    /**
+     * Returns false if image is in initial, unzoomed state. False, otherwise.
+     *
+     * @return true if image is zoomed
+     */
     val isZoomed: Boolean
         get() = currentZoom != 1.0f
 
+    /**
+     * @return rect representing zoomed image
+     */
     val zoomedRect: RectF
         get() {
             if (imageScaleType == ScaleType.FIT_XY) {
@@ -212,6 +242,10 @@ class ZoomableImageView : ImageView {
         return imageScaleType
     }
 
+    /**
+     * Save the current matrix and view dimensions
+     * in the prevMatrix and prevView variables.
+     */
     private fun savePreviousImageValues() {
         if (viewSize.height != 0.0f && viewSize.width != 0.0f) {
             imgMatrix.getValues(matrix)
@@ -311,11 +345,20 @@ class ZoomableImageView : ImageView {
         savePreviousImageValues()
     }
 
+    /**
+     * Reset zoom and translation to initial state.
+     */
     fun resetZoom() {
         currentZoom = DEFAULT_MIN_ZOOM
         fitImageToView()
     }
 
+    /**
+     * Set zoom to the specified scale. Image will be centered around the point
+     * (focusX, focusY). These floats range from 0 to 1 and denote the focus point
+     * as a fraction from the left and top of the view. For example, the top left
+     * corner of the image would be (0, 0). And the bottom right corner would be (1, 1).
+     */
     @JvmOverloads
     fun setZoom(scale: Float,
                 focusX: Float = 0.5f,
@@ -367,12 +410,20 @@ class ZoomableImageView : ImageView {
         imageMoveListener?.onMove()
     }
 
+    /**
+     * Set zoom parameters equal to another TouchImageView. Including scale, position,
+     * and ScaleType.
+     */
     fun setZoom(img: ZoomableImageView) {
         img.scrollPosition?.let { center ->
             setZoom(img.currentZoom, center.x, center.y, img.scaleType)
         }
     }
 
+    /**
+     * Set the focus point of the zoomed image. The focus points are denoted as a fraction from the
+     * left and top of the view. The focus points can range in value between 0 and 1.
+     */
     fun setScrollPosition(focusX: Float, focusY: Float) {
         setZoom(currentZoom, focusX, focusY)
     }
@@ -505,6 +556,9 @@ class ZoomableImageView : ImageView {
         }
     }
 
+    /**
+     * Performs boundary checking and fixes the image matrix if it is out of bounds.
+     */
     private fun fixTrans() {
 
         if (rotationAngle == NO_ROTATION_ANGLE) { // just use simple method
@@ -591,6 +645,13 @@ class ZoomableImageView : ImageView {
         return KPoint(dx, dy)
     }
 
+    /**
+     * When transitioning from zooming from focus to zoom from center (or vice versa)
+     * the image can become unaligned within the view. This is apparent when zooming
+     * quickly. When the content size is less than the view size, the content will often
+     * be centered incorrectly within the view. fixScaleTrans first calls fixTrans() and
+     * then makes sure the image is centered correctly within the view.
+     */
     private fun fixScaleTrans() {
         fixTrans()
         // We do translations for rotated images in other place
@@ -630,6 +691,11 @@ class ZoomableImageView : ImageView {
         return delta
     }
 
+    /**
+     * If the normalizedScale is equal to 1, then the image is made to fit the screen. Otherwise,
+     * it is made to fit the screen according to the dimensions of the previous image matrix. This
+     * allows the image to maintain its zoom after rotation.
+     */
     private fun fitImageToView() {
         val drawable = drawable
         if (drawable == null || drawable.intrinsicWidth == 0 || drawable.intrinsicHeight == 0) {
@@ -666,6 +732,7 @@ class ZoomableImageView : ImageView {
             else -> throw UnsupportedOperationException("ZoomableImageView does not support FIT_START or FIT_END")
         }
 
+        // Center the image
         val redundantXSpace = viewSize.width - scaleX * drawableWidth
         val redundantYSpace = viewSize.height - scaleY * drawableHeight
         matchViewSize.width = viewSize.width - redundantXSpace
@@ -673,6 +740,7 @@ class ZoomableImageView : ImageView {
 
         if ((!isZoomed && !imageRenderedAtLeastOnce)
                 || (prevMatchViewSize.width == 0.0f && prevMatchViewSize.height == 0.0f)) {
+            // Stretch and center image to fit view
             imgMatrix.setScale(scaleX, scaleY)
             imgMatrix.postTranslate(redundantXSpace / 2, redundantYSpace / 2)
             currentZoom = DEFAULT_MIN_ZOOM
@@ -726,6 +794,18 @@ class ZoomableImageView : ImageView {
         }
     }
 
+    /**
+     * After rotating, the matrix needs to be translated. This function finds the area of image
+     * which was previously centered and adjusts translations so that is again the center, post-rotation.
+     *
+     * @param axis          Matrix.MTRANS_X or Matrix.MTRANS_Y
+     * @param trans         the value of trans in that axis before the rotation
+     * @param prevImageSize the width/height of the image before the rotation
+     * @param imageSize     width/height of the image after rotation
+     * @param prevViewSize  width/height of view before rotation
+     * @param viewSize      width/height of view after rotation
+     * @param drawableSize  width/height of drawable
+     */
     private fun translateMatrixAfterRotate(
             axis: Int,
             trans: Float,
@@ -737,12 +817,17 @@ class ZoomableImageView : ImageView {
     ) {
         when {
             imageSize < viewSize -> {
+                // The width/height of image is less than the view's width/height. Center it.
                 matrix[axis] = (viewSize - drawableSize * matrix[Matrix.MSCALE_X]) * 0.5f
             }
             trans > 0 -> {
+                // The image is larger than the view, but was not before rotation. Center it.
                 matrix[axis] = -((imageSize - viewSize) / 2)
             }
             else -> {
+                // Find the area of the image which was previously centered in the view. Determine its distance
+                // from the left/top side of the view as a fraction of the entire image's width/height. Use that percentage
+                // to calculate the trans in the new view width/height.
                 val percentage = (Math.abs(trans) + prevViewSize / 2) / prevImageSize
                 matrix[axis] = -(percentage * imageSize - viewSize / 2)
             }
@@ -871,6 +956,8 @@ class ZoomableImageView : ImageView {
         }
 
         override fun onFling(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+            // If a previous fling is still active, it should be cancelled so that two flings
+            // are not run simultaenously.
             fling?.cancelFling()
             fling = Fling(velocityX.toInt(), velocityY.toInt())
             fling?.let {
@@ -962,6 +1049,10 @@ class ZoomableImageView : ImageView {
         fixScaleTrans()
     }
 
+    /**
+     * DoubleTapZoom calls a series of runnables which apply
+     * an animated zoom in/out graphic to the image.
+     */
     private inner class DoubleTapZoom(
             private val targetZoom: Float,
             focusX: Float,
@@ -999,12 +1090,19 @@ class ZoomableImageView : ImageView {
             imageMoveListener?.onMove()
 
             if (t < 1.0f) {
+                // We haven't finished zooming
                 compatPostOnAnimation(runnable = this)
             } else {
+                // Finished zooming
                 state = State.NONE
             }
         }
 
+        /**
+         * Interpolate between where the image should start and end in order to translate
+         * the image so that the point that is touched is what ends up centered at the end
+         * of the zoom.
+         */
         private fun translateImageToCenterTouchPosition(t: Float) {
             val targetX = startTouch.x + t * (endTouch.x - startTouch.x)
             val targetY = startTouch.y + t * (endTouch.y - startTouch.y)
@@ -1019,6 +1117,10 @@ class ZoomableImageView : ImageView {
             return interpolator.getInterpolation(elapsed)
         }
 
+        /**
+         * Interpolate the current targeted zoom and get the delta
+         * from the current zoom.
+         */
         private fun calculateDeltaScale(t: Float): Double {
             val zoom = (startZoom + t * (targetZoom - startZoom)).toDouble()
             return zoom / currentZoom
@@ -1026,6 +1128,16 @@ class ZoomableImageView : ImageView {
 
     }
 
+    /**
+     * This function will transform the coordinates in the touch event to the coordinate
+     * system of the drawable that the imageview contain
+     *
+     * @param x            x-coordinate of touch event
+     * @param y            y-coordinate of touch event
+     * @param clipToBitmap Touch event may occur within view, but outside image content. True, to clip return value
+     *                     to the bounds of the bitmap size.
+     * @return Coordinates of the point touched, in the coordinate system of the original drawable.
+     */
     private fun transformCoordTouchToBitmap(x: Float, y: Float, clipToBitmap: Boolean): PointF {
         imgMatrix.getValues(matrix)
         val origW = drawable.intrinsicWidth.toFloat()
@@ -1043,6 +1155,14 @@ class ZoomableImageView : ImageView {
         return PointF(finalX, finalY)
     }
 
+    /**
+     * Inverse of transformCoordTouchToBitmap. This function will transform the coordinates in the
+     * drawable's coordinate system to the view's coordinate system.
+     *
+     * @param bx x-coordinate in original bitmap coordinate system
+     * @param by y-coordinate in original bitmap coordinate system
+     * @return Coordinates of the point in the view's coordinate system.
+     */
     private fun transformCoordBitmapToTouch(bx: Float, by: Float): PointF {
         imgMatrix.getValues(matrix)
         val origW = drawable.intrinsicWidth.toFloat()
@@ -1054,6 +1174,11 @@ class ZoomableImageView : ImageView {
         return PointF(finalX, finalY)
     }
 
+    /**
+     * Fling launches sequential runnables which apply
+     * the fling graphic to the image. The values for the translation
+     * are interpolated by the Scroller.
+     */
     private inner class Fling(velocityX: Int, velocityY: Int) : Runnable {
 
         var scroller: CompatScroller? = null
@@ -1298,8 +1423,15 @@ class ZoomableImageView : ImageView {
 
 private const val DEFAULT_MIN_ZOOM = 1f
 private const val DEFAULT_MAX_ZOOM = 5f
+
+//
+// SuperMin and SuperMax multipliers. Determine how much the image can be
+// zoomed below or above the zoom boundaries, before animating back to the
+// min/max zoom boundary.
+//
 private const val SUPER_MIN_MULTIPLIER = .75f
 private const val SUPER_MAX_MULTIPLIER = 1.25f
+
 private const val ZOOM_TIME = 300f
 private const val UPSCALING_ROTATION_THRESHOLD = 1f
 private const val NO_ROTATION_ANGLE = 0f

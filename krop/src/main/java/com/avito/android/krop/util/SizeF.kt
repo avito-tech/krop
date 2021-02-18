@@ -1,4 +1,4 @@
-package com.avito.android.krop
+package com.avito.android.krop.util
 
 import android.graphics.RectF
 import android.os.Parcel

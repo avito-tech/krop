@@ -3,6 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/rotate"
+        android:icon="@android:drawable/ic_menu_rotate"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/menu_select"
         android:icon="@drawable/image"
         android:title="@string/select_picture"

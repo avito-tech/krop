@@ -3,12 +3,16 @@ package com.avito.android.krop
 import android.content.Context
 import android.content.res.TypedArray
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.RectF
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
 import android.widget.FrameLayout
+import androidx.annotation.WorkerThread
+import com.avito.android.krop.util.Transformation
 
 class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
 
@@ -61,6 +65,8 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         addView(overlayView)
     }
 
+    fun rotateBy(angle: Float) = imageView.rotateBy(angle)
+
     fun setZoom(scale: Float) {
         imageView.setZoom(scale)
     }
@@ -78,54 +84,22 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         imageView.setImageBitmap(bitmap)
     }
 
-    fun setTransformation(transformation: Transformation) {
-        with(transformation) {
-            val scale = if (size.height > size.width) {
-                size.width / (crop.right - crop.left)
-            } else {
-                size.height / (crop.bottom - crop.top)
-            }
-            val focusX = (crop.right + crop.left) / (2 * size.width)
-            val focusY = (crop.bottom + crop.top) / (2 * size.height)
+    fun setTransformation(transformation: Transformation) =
+            imageView.setTransformation(transformation)
 
-            imageView.setZoom(scale = scale, focusX = focusX, focusY = focusY)
-        }
-    }
+    fun getTransformation() = imageView.getTransformation()
 
-    fun getTransformation(): Transformation {
-        val transformation = Transformation()
-        val bitmap = bitmap ?: return transformation
-        with(transformation) {
-            size = SizeF(bitmap.width.toFloat(), bitmap.height.toFloat())
-            crop = getCropRect()
-        }
-        return transformation
-    }
-
-    private fun getCropRect(): RectF {
-        val rect = RectF()
-        val bitmap = bitmap ?: return rect
-        val bounds = imageView.getImageBounds()
-        val multiplier = bounds.width() / bitmap.width.toFloat()
-        with(rect) {
-            left = (-bounds.left) / multiplier
-            top = (-bounds.top) / multiplier
-            right = (-bounds.left + viewport.width()) / multiplier
-            bottom = (-bounds.top + viewport.height()) / multiplier
-        }
-
-        return rect
-    }
-
+    @WorkerThread
     fun getCroppedBitmap(): Bitmap? {
-        val rect = getCropRect()
-        return Bitmap.createBitmap(
-                bitmap,
-                rect.left.toInt(),
-                rect.top.toInt(),
-                rect.width().toInt(),
-                rect.height().toInt()
-        )
+
+        val (rect, multiplier) = getCropRect()
+
+        val renderBitmap = bitmap ?: return null
+        val result = Bitmap.createBitmap(rect.width().toInt(), rect.height().toInt(), renderBitmap.config)
+        val canvas = Canvas(result)
+        canvas.matrix = Matrix(imageView.imageMatrix).apply { postScale(multiplier, multiplier) }
+        canvas.drawBitmap(renderBitmap, 0f, 0f, null)
+        return result
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -243,6 +217,21 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         }
 
         return rect
+    }
+
+    private fun getCropRect(): Pair<RectF, Float> {
+        val rect = RectF()
+        val bitmap = bitmap ?: return rect to 1f
+        val bounds = imageView.getImageBounds()
+        val multiplier = bitmap.width.toFloat() / bounds.width()
+        with(rect) {
+            left = (-bounds.left) * multiplier
+            top = (-bounds.top) * multiplier
+            right = (-bounds.left + viewport.width()) * multiplier
+            bottom = (-bounds.top + viewport.height()) * multiplier
+        }
+
+        return rect to multiplier
     }
 
     interface CropListener {

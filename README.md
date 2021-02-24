@@ -69,12 +69,12 @@ val rect = kropView.getCropRect()
 
 ### Listeners
 
-You may listen for cropping event, by defining `CropListener`:
+You may listen for image update event (move, scale, rotation), by defining `TransformationListener`:
 
 ```kotlin
-    interface CropListener {
+    interface TransformationListener {
 
-        fun onCrop(transformation: Transformation)
+        fun onUpdate(transformation: Transformation)
 
     }
 ```

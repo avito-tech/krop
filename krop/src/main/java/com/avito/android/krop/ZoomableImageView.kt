@@ -26,12 +26,14 @@ import android.widget.Scroller
 import com.avito.android.krop.util.KLine
 import com.avito.android.krop.util.KPoint
 import com.avito.android.krop.util.KRect
+import com.avito.android.krop.util.ScaleAfterRotationStyle
 import com.avito.android.krop.util.SizeF
 import com.avito.android.krop.util.Transformation
 import java.lang.Math.toRadians
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sign
 import kotlin.math.sin
 
@@ -75,11 +77,13 @@ class ZoomableImageView : ImageView {
     private var delayedTransformation: Transformation? = null
 
     private var realSize = SizeF()
+
     //
     // Size of view and previous view size (ie before rotation)
     //
     private var viewSize = SizeF() // Viewport size
     private var prevViewSize = SizeF()
+
     //
     // Size of image when it is stretched to fit view. Before and After rotation.
     //
@@ -194,7 +198,7 @@ class ZoomableImageView : ImageView {
         maxScale = DEFAULT_MAX_ZOOM
         superMinScale = SUPER_MIN_MULTIPLIER * minScale
         superMaxScale = SUPER_MAX_MULTIPLIER * maxScale
-        imageMatrix = imgMatrix
+        renderChanges()
         scaleType = ScaleType.MATRIX
         state = State.NONE
         onDrawReady = false
@@ -379,13 +383,14 @@ class ZoomableImageView : ImageView {
         matrix[Matrix.MTRANS_Y] = -(focusY * imageHeight - viewSize.height / 2)
         imgMatrix.setValues(matrix)
         fixTrans()
-        imageMatrix = imgMatrix
+        renderChanges()
     }
 
     /**
      * @param angle clockwise angle for rotation
+     * @param scaleAnimation style of the free space closing animation after rotation
      */
-    fun rotateBy(angle: Float) {
+    fun rotateBy(angle: Float, scaleAnimation: ScaleAfterRotationStyle) {
 
         if (angle == NO_ROTATION_ANGLE) return
 
@@ -404,8 +409,29 @@ class ZoomableImageView : ImageView {
         )
         rotationAngle = (rotationAngle + angle) % 360
 
-        fixZoomAfterRotation()
-        imageMatrix = imgMatrix
+        val scaleStrategy: ((Float) -> Unit)? = when (scaleAnimation) {
+            ScaleAfterRotationStyle.INSTANT -> { deltaScale ->
+                scaleImage(deltaScale.toDouble(), viewSize.width / 2, viewSize.height / 2, stretchImageToSuper = false)
+                fixTrans()
+                minZoom = currentZoom
+            }
+            ScaleAfterRotationStyle.ANIMATE -> { deltaScale ->
+                val targetScale = currentZoom * deltaScale
+                val targetZoom = min(maxScale, targetScale)
+                compatPostOnAnimation(DoubleTapZoom(
+                        targetZoom,
+                        focusX = viewSize.width / 2,
+                        focusY = viewSize.height / 2,
+                        stretchImageToSuper = true,
+                        duration = UPSCALE_ON_ROTATION_TIME_MS,
+                        fixTransOnScale = false
+                ))
+                minZoom = targetZoom
+            }
+            ScaleAfterRotationStyle.NONE -> null
+        }
+        scaleStrategy?.let { fixZoomAfterRotation(it) }
+        renderChanges()
 
         imageMoveListener?.onMove()
     }
@@ -446,7 +472,7 @@ class ZoomableImageView : ImageView {
 
         with(transformation) {
             setZoom(scale = scale)
-            rotateBy(rotationAngle)
+            rotateBy(rotationAngle, ScaleAfterRotationStyle.INSTANT)
             moveFocusBy(focusOffset.x, focusOffset.y)
         }
 
@@ -454,10 +480,10 @@ class ZoomableImageView : ImageView {
 
     private fun moveFocusBy(dx: Float, dy: Float) {
         imgMatrix.postTranslate(dx, dy)
-        imageMatrix = imgMatrix
+        renderChanges()
     }
 
-    private fun fixZoomAfterRotation() {
+    private fun fixZoomAfterRotation(scaleStrategy: (Float) -> Unit) {
         val image = getCurrentBounds() ?: return
 
         // No need to zoom in, if viewport already inside image
@@ -490,12 +516,7 @@ class ZoomableImageView : ImageView {
             val shortenDiag = KLine(viewportCenter, intersection)
             diag.length() / shortenDiag.length()
         }.max()?.takeIf { it > UPSCALING_ROTATION_THRESHOLD }
-        scale?.let { deltaScale ->
-            scaleImage(deltaScale.toDouble(), pivotX, pivotY, stretchImageToSuper = false)
-            minZoom = currentZoom
-
-            fixTrans()
-        }
+        scale?.let { deltaScale -> scaleStrategy(deltaScale) }
     }
 
     private fun tryFixMinScale() {
@@ -638,8 +659,9 @@ class ZoomableImageView : ImageView {
     /**
      * Returns offset required to get to focus point from image's center
      */
-    private fun getFocusOffset() : KPoint {
-        val imageCenter = getCurrentBounds()?.center() ?: KPoint(viewport.centerX(), viewport.centerY())
+    private fun getFocusOffset(): KPoint {
+        val imageCenter = getCurrentBounds()?.center()
+                ?: KPoint(viewport.centerX(), viewport.centerY())
         val dx = imageCenter.x - viewport.centerX()
         val dy = imageCenter.y - viewport.centerY()
         return KPoint(dx, dy)
@@ -782,7 +804,7 @@ class ZoomableImageView : ImageView {
             imgMatrix.setValues(matrix)
         }
         fixTrans()
-        imageMatrix = imgMatrix
+        renderChanges()
     }
 
     private fun setViewSize(mode: Int, size: Int, drawableWidth: Int): Int {
@@ -898,6 +920,10 @@ class ZoomableImageView : ImageView {
         )
     }
 
+    private fun renderChanges() {
+        imageMatrix = imgMatrix
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         event.offsetLocation(-viewport.left, -viewport.top)
@@ -931,7 +957,7 @@ class ZoomableImageView : ImageView {
             }
         }
 
-        imageMatrix = imgMatrix
+        renderChanges()
 
         userTouchListener?.onTouch(this, event)
         imageMoveListener?.onMove()
@@ -1057,7 +1083,10 @@ class ZoomableImageView : ImageView {
             private val targetZoom: Float,
             focusX: Float,
             focusY: Float,
-            private val stretchImageToSuper: Boolean) : Runnable {
+            private val stretchImageToSuper: Boolean,
+            private val duration: Float = ZOOM_TIME_MS,
+            private val fixTransOnScale: Boolean = true
+    ) : Runnable {
 
         private val startTime: Long
         private val startZoom: Float
@@ -1083,37 +1112,51 @@ class ZoomableImageView : ImageView {
             val t = interpolate()
             val deltaScale = calculateDeltaScale(t)
             scaleImage(deltaScale, bitmapX, bitmapY, stretchImageToSuper)
-            translateImageToCenterTouchPosition(t)
-            fixScaleTrans()
-            imageMatrix = imgMatrix
 
+            // We consider some deltas insignificant.
+            // In this case, we give penalty to subsequent image translation.
+            // Inaccuracy in translations will be fixed on the last step
+            val noScaleOnThisStep = abs(deltaScale - SCALE_NO_CHANGES_DELTA) < SCALE_EPS
+            val partialImageTranslateToCenter = !fixTransOnScale && noScaleOnThisStep
+            val translateWeight = if (partialImageTranslateToCenter) (1 - t) else 1f
+            translateImageToCenterTouchPosition(t, translateWeight)
+
+            val isFinished = isAnimationFinished(t)
+            if (fixTransOnScale || partialImageTranslateToCenter && isFinished) {
+                fixScaleTrans()
+            }
+            renderChanges()
             imageMoveListener?.onMove()
 
-            if (t < 1.0f) {
-                // We haven't finished zooming
-                compatPostOnAnimation(runnable = this)
-            } else {
+            if (isFinished) {
                 // Finished zooming
                 state = State.NONE
+            } else {
+                // We haven't finished zooming
+                compatPostOnAnimation(runnable = this)
             }
         }
+
+        private fun isAnimationFinished(t: Float) = t >= 1
 
         /**
          * Interpolate between where the image should start and end in order to translate
          * the image so that the point that is touched is what ends up centered at the end
          * of the zoom.
          */
-        private fun translateImageToCenterTouchPosition(t: Float) {
+        private fun translateImageToCenterTouchPosition(t: Float, translateWeight: Float) {
             val targetX = startTouch.x + t * (endTouch.x - startTouch.x)
             val targetY = startTouch.y + t * (endTouch.y - startTouch.y)
             val curr = transformCoordBitmapToTouch(bitmapX, bitmapY)
-            imgMatrix.postTranslate(targetX - curr.x, targetY - curr.y)
+            val dx = (targetX - curr.x) * translateWeight
+            val dy = (targetY - curr.y) * translateWeight
+            imgMatrix.postTranslate(dx, dy)
         }
 
         private fun interpolate(): Float {
             val currTime = System.currentTimeMillis()
-            var elapsed = (currTime - startTime) / ZOOM_TIME
-            elapsed = Math.min(1f, elapsed)
+            var elapsed = (currTime - startTime) / duration
+            elapsed = min(1f, elapsed)
             return interpolator.getInterpolation(elapsed)
         }
 
@@ -1262,7 +1305,7 @@ class ZoomableImageView : ImageView {
                     currY = newY
                     imgMatrix.postTranslate(transX.toFloat(), transY.toFloat())
                     fixTrans()
-                    imageMatrix = imgMatrix
+                    renderChanges()
                     compatPostOnAnimation(runnable = this)
                 }
             }
@@ -1432,6 +1475,9 @@ private const val DEFAULT_MAX_ZOOM = 5f
 private const val SUPER_MIN_MULTIPLIER = .75f
 private const val SUPER_MAX_MULTIPLIER = 1.25f
 
-private const val ZOOM_TIME = 300f
+private const val ZOOM_TIME_MS = 300f
+private const val UPSCALE_ON_ROTATION_TIME_MS = 200f
+private const val SCALE_NO_CHANGES_DELTA = 1.0f
+private const val SCALE_EPS = 0.001f
 private const val UPSCALING_ROTATION_THRESHOLD = 1f
 private const val NO_ROTATION_ANGLE = 0f

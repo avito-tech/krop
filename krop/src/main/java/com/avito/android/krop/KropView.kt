@@ -12,6 +12,7 @@ import android.os.Parcelable
 import android.util.AttributeSet
 import android.widget.FrameLayout
 import androidx.annotation.WorkerThread
+import com.avito.android.krop.util.ScaleAfterRotationStyle
 import com.avito.android.krop.util.Transformation
 
 class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
@@ -28,7 +29,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
     private lateinit var imageView: ZoomableImageView
     private lateinit var overlayView: OverlayView
 
-    var cropListener: CropListener? = null
+    var transformationListener: TransformationListener? = null
 
     init {
         parseAttrs(attrs)
@@ -55,7 +56,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         imageView = ZoomableImageView(context)
         imageView.imageMoveListener = object : ZoomableImageView.ImageMoveListener {
             override fun onMove() {
-                cropListener?.onCrop(getTransformation())
+                transformationListener?.onUpdate(getTransformation())
             }
         }
         addView(imageView)
@@ -65,7 +66,8 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         addView(overlayView)
     }
 
-    fun rotateBy(angle: Float) = imageView.rotateBy(angle)
+    fun rotateBy(angle: Float, scaleAnimation: ScaleAfterRotationStyle = ScaleAfterRotationStyle.NONE) =
+            imageView.rotateBy(angle, scaleAnimation)
 
     fun setZoom(scale: Float) {
         imageView.setZoom(scale)
@@ -234,9 +236,9 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         return rect to multiplier
     }
 
-    interface CropListener {
+    interface TransformationListener {
 
-        fun onCrop(transformation: Transformation)
+        fun onUpdate(transformation: Transformation)
 
     }
 

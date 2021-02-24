@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewTreeObserver
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -24,6 +25,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import com.avito.android.krop.KropView
+import com.avito.android.krop.util.ScaleAfterRotationStyle
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
@@ -245,12 +247,14 @@ class MainActivity : AppCompatActivity() {
 
         var fromAngle = 0f
         ValueAnimator.ofFloat(fromAngle, angle).apply {
+            interpolator = AccelerateDecelerateInterpolator()
             duration = ROTATION_DURATION_MS
             addUpdateListener { updatedAnimation ->
                 val value = updatedAnimation.animatedValue as Float
                 val diff = value - fromAngle
                 fromAngle = value
-                kropView.rotateBy(diff)
+                val animation = if (value == angle) ScaleAfterRotationStyle.ANIMATE else ScaleAfterRotationStyle.NONE
+                kropView.rotateBy(diff, animation)
             }
             start()
         }
@@ -279,4 +283,4 @@ class MainActivity : AppCompatActivity() {
 
 private const val REQUEST_PICK_IMAGE: Int = 42
 private const val KEY_URI = "key_uri"
-private const val ROTATION_DURATION_MS = 400L
+private const val ROTATION_DURATION_MS = 300L

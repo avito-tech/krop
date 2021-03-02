@@ -11,6 +11,7 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
 import android.widget.FrameLayout
+import androidx.annotation.IdRes
 import androidx.annotation.WorkerThread
 import com.avito.android.krop.util.ScaleAfterRotationStyle
 import com.avito.android.krop.util.Transformation
@@ -24,6 +25,9 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
     private var aspectY = 1
     private var overlayColor = Color.TRANSPARENT
     private var overlayShape: Int = SHAPE_OVAL
+
+    @IdRes
+    private var overlayResId: Int = DEFAULT_OVERLAY_ID
     private var bitmap: Bitmap? = null
 
     private lateinit var imageView: ZoomableImageView
@@ -46,6 +50,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
                 aspectY = getInteger(R.styleable.KropView_krop_aspectY, aspectY)
                 overlayShape = getInteger(R.styleable.KropView_krop_shape, overlayShape)
                 overlayColor = getColor(R.styleable.KropView_krop_overlayColor, overlayColor)
+                overlayResId = getResourceId(R.styleable.KropView_krop_overlay, overlayResId)
             }
         } finally {
             arr?.recycle()
@@ -61,9 +66,17 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         }
         addView(imageView)
 
-        overlayView = OverlayView(context, overlayShape)
-        overlayView.setOverlayColor(overlayColor)
-        addView(overlayView)
+        applyOverlayShape(overlayShape)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        if (overlayResId != DEFAULT_OVERLAY_ID) {
+            val overlay = rootView.findViewById(overlayResId) as? OverlayView
+                    ?: error("Overlay should instantiate OverlayView class")
+            applyOverlay(overlay)
+        }
     }
 
     fun rotateBy(angle: Float, scaleAnimation: ScaleAfterRotationStyle = ScaleAfterRotationStyle.NONE) =
@@ -137,10 +150,19 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         invalidate()
     }
 
-    fun applyOverlayShape(shape: Int) {
-        this.overlayShape = shape
-        overlayView.setOverlayShape(overlayShape)
-        invalidate()
+    fun applyOverlayShape(@OverlayShape shape: Int) {
+        overlayShape = shape
+        overlayView = when (overlayShape) {
+            SHAPE_OVAL -> OvalOverlay(context)
+            else -> RectOverlay(context)
+        }
+        setupOverlayView()
+    }
+
+    fun applyOverlay(overlay: OverlayView) {
+        overlayShape = SHAPE_CUSTOM
+        overlayView = overlay
+        setupOverlayView()
     }
 
     override fun invalidate() {
@@ -170,12 +192,17 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
             overlayColor = state.overlayColor
             overlayShape = state.overlayShape
             imageView.onRestoreInstanceState(state.imageViewState)
-            overlayView.apply {
-                setOverlayColor(overlayColor)
-                setOverlayShape(overlayShape)
-            }
+            overlayView.setOverlayColor(overlayColor)
         } else {
             super.onRestoreInstanceState(state)
+        }
+    }
+
+    private fun setupOverlayView() {
+        overlayView.setOverlayColor(overlayColor)
+        if (childCount > OVERLAY_HIERARCHY_INDEX) removeViewAt(OVERLAY_HIERARCHY_INDEX)
+        if (overlayView.parent == null) {
+            addView(overlayView, OVERLAY_HIERARCHY_INDEX)
         }
     }
 
@@ -298,3 +325,6 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         }
     }
 }
+
+private const val DEFAULT_OVERLAY_ID = 0
+private const val OVERLAY_HIERARCHY_INDEX = 1

@@ -90,7 +90,7 @@ app:krop_aspectY="3"
 ```
 or in code:
 ```
-kropView.applyAspectRatio(aspectX = 4, aspectY = 3);
+kropView.applyAspectRatio(aspectX = 4, aspectY = 3)
 ```
 
 * Set overlay color:
@@ -101,7 +101,7 @@ app:krop_overlayColor="#aaffffff
 ```
 or in code:
 ```
-kropView.applyOverlayColor(color = 0xaaffffff);
+kropView.applyOverlayColor(color = 0xaaffffff)
 ```
 
 * Set minimum crop region offset (px):
@@ -112,7 +112,29 @@ app:krop_offset="24dp"
 ```
 or in code:
 ```
-kropView.applyOffset(offset = 120);
+kropView.applyOffset(offset = 120)
+```
+
+* Set overlay style (px):
+
+in XML layout:
+```java
+app:krop_shape="rect"
+```
+or in code:
+```
+kropView.applyOverlayShape(1)
+```
+All standart shapes are listed in OverlayShape class.
+
+You can also create your own overlay, by inheriting OverlayView, and referencing it:
+in XML layout:
+```java
+app:krop_overlay="@id/custom_overlay"
+```
+or in code:
+```
+kropView.applyOverlay(CustomOverlay())
 ```
 
 ### License

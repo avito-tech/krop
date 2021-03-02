@@ -7,27 +7,23 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
+import android.util.AttributeSet
 import androidx.annotation.IntDef
 import android.view.View
 
-class OverlayView(context: Context) : View(context) {
+abstract class OverlayView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
     private var overlayColor: Int = Color.TRANSPARENT
-    private var overlayShape: Int = SHAPE_OVAL
-    private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
+        style = Paint.Style.FILL
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+    }
 
     var viewport = RectF()
 
-    constructor(context: Context, @OverlayShape shape: Int) : this(context) {
-        this.overlayShape = shape
-    }
-
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
-
-        clearPaint.color = Color.BLACK
-        clearPaint.style = Paint.Style.FILL
-        clearPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -51,26 +47,38 @@ class OverlayView(context: Context) : View(context) {
         invalidate()
     }
 
-    fun setOverlayShape(@OverlayShape shape: Int) {
-        overlayShape = shape
-        invalidate()
-    }
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         canvas.drawColor(overlayColor)
-        when (overlayShape) {
-            SHAPE_OVAL -> canvas.drawOval(viewport, clearPaint)
-            else -> canvas.drawRect(viewport, clearPaint)
-        }
+        canvas.drawViewportView(viewport, clearPaint)
     }
 
+    /**
+     * @param viewport focus window rectangle on canvas
+     * @param clearPaint paint for removing color in custom area of canvas
+     */
+    protected abstract fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint)
+}
+
+class OvalOverlay(context: Context) : OverlayView(context) {
+
+    override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
+        drawOval(viewport, clearPaint)
+    }
+}
+
+class RectOverlay(context: Context) : OverlayView(context) {
+
+    override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
+        drawRect(viewport, clearPaint)
+    }
 }
 
 @IntDef(SHAPE_OVAL, SHAPE_RECT)
 @Retention(AnnotationRetention.SOURCE)
 annotation class OverlayShape
 
+const val SHAPE_CUSTOM = -1
 const val SHAPE_OVAL = 0
 const val SHAPE_RECT = 1

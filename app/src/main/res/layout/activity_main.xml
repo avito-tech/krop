@@ -10,8 +10,8 @@
         android:id="@+id/view_flipper"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="56dp"
         android:layout_marginTop="?actionBarSize"
+        android:layout_marginBottom="56dp"
         android:background="@android:color/white">
 
         <ViewFlipper
@@ -26,19 +26,30 @@
                 <ProgressBar
                     android:layout_width="42dp"
                     android:layout_height="42dp"
-                    android:layout_gravity="center"/>
+                    android:layout_gravity="center" />
 
             </FrameLayout>
 
-            <com.avito.android.krop.KropView
-                android:id="@+id/krop_view"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:krop_aspectX="1"
-                app:krop_aspectY="1"
-                app:krop_offset="@dimen/default_offset"
-                app:krop_shape="oval"
-                app:krop_overlayColor="@color/default_overlay_color" />
+                android:layout_height="match_parent">
+
+                <com.avito.android.krop.KropView
+                    android:id="@+id/krop_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:krop_aspectX="1"
+                    app:krop_aspectY="1"
+                    app:krop_offset="@dimen/default_offset"
+                    app:krop_overlayColor="@color/default_overlay_color"
+                    app:krop_shape="rect" />
+
+                <com.avito.android.krop.demo.CustomOverlay
+                    android:id="@+id/custom_overlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone"/>
+            </FrameLayout>
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -47,12 +58,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="24dp"
                     android:layout_gravity="center"
                     android:gravity="center"
-                    android:textSize="14sp"
+                    android:padding="24dp"
+                    android:text="@string/unable_to_load_image"
                     android:textColor="@color/color_red"
-                    android:text="@string/unable_to_load_image"/>
+                    android:textSize="14sp" />
 
             </FrameLayout>
 

@@ -42,7 +42,7 @@ import kotlin.math.sin
  * Based on TouchImageView by Michael Ortiz
  */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
-class ZoomableImageView : ImageView {
+class ZoomableImageView : ImageView, ViewportUpdateListener {
 
     private enum class State {
         NONE, DRAG, ZOOM, FLING, ANIMATE_ZOOM
@@ -76,8 +76,6 @@ class ZoomableImageView : ImageView {
     private var delayedZoomVariables: ZoomVariables? = null
     private var delayedTransformation: Transformation? = null
 
-    private var realSize = SizeF()
-
     //
     // Size of view and previous view size (ie before rotation)
     //
@@ -103,7 +101,7 @@ class ZoomableImageView : ImageView {
     private val imageHeight: Float
         get() = matchViewSize.height * currentZoom
 
-    var viewport = RectF()
+    private lateinit var viewport: RectF
 
     /**
      * Return the point at the center of the zoomed image. The PointF coordinates range
@@ -308,24 +306,21 @@ class ZoomableImageView : ImageView {
         val widthMode = MeasureSpec.getMode(widthMeasureSpec)
         val heightSize = MeasureSpec.getSize(heightMeasureSpec)
         val heightMode = MeasureSpec.getMode(heightMeasureSpec)
-        realSize.width = setViewSize(widthMode, widthSize, drawableWidth).toFloat()
-        realSize.height = setViewSize(heightMode, heightSize, drawableHeight).toFloat()
+        val realWidth = setViewSize(widthMode, widthSize, drawableWidth)
+        val realHeight = setViewSize(heightMode, heightSize, drawableHeight)
 
-        if (viewport.isEmpty) {
-            with(viewport) {
-                left = 0.0f
-                top = 0.0f
-                right = realSize.width
-                bottom = realSize.height
-            }
-        }
+        setMeasuredDimension(realWidth, realHeight)
+    }
+
+    override fun onUpdateViewport(newViewport: RectF) {
+        viewport = newViewport
 
         viewSize.width = viewport.width()
         viewSize.height = viewport.height()
 
-        val rect = realSize.middle(viewSize)
-        setMeasuredDimension(realSize.widthInt, realSize.heightInt)
-        setPadding(rect.left.toInt(), rect.top.toInt(), rect.right.toInt(), rect.bottom.toInt())
+        val paddingX = viewport.left.toInt()
+        val paddingY = viewport.top.toInt()
+        setPadding(paddingX, paddingY, paddingX, paddingY)
 
         fitImageToView()
     }

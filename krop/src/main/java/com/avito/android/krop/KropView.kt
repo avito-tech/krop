@@ -16,7 +16,8 @@ import androidx.annotation.WorkerThread
 import com.avito.android.krop.util.ScaleAfterRotationStyle
 import com.avito.android.krop.util.Transformation
 
-class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
+class KropView(context: Context, attrs: AttributeSet) :
+        FrameLayout(context, attrs), OverlayView.MeasureListener {
 
     private val viewport = RectF()
 
@@ -117,21 +118,18 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         return result
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = MeasureSpec.getSize(heightMeasureSpec)
-
+    override fun onOverlayMeasured(width: Int, height: Int) {
         calculateViewport(viewport, width, height, offset, aspectX, aspectY)
 
-        imageView.viewport = viewport
-        overlayView.viewport = viewport
-
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        overlayView.onUpdateViewport(viewport)
+        imageView.onUpdateViewport(viewport)
+        imageView.requestLayout()
+        invalidate()
     }
 
     fun applyOffset(offset: Int) {
         this.offset = offset
-        imageView.requestLayout()
+        overlayView.requestLayout()
         imageView.resetZoom()
         invalidate()
     }
@@ -139,7 +137,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
     fun applyAspectRatio(aspectX: Int, aspectY: Int) {
         this.aspectX = aspectX
         this.aspectY = aspectY
-        imageView.requestLayout()
+        overlayView.requestLayout()
         imageView.resetZoom()
         invalidate()
     }
@@ -204,6 +202,7 @@ class KropView(context: Context, attrs: AttributeSet) : FrameLayout(context, att
         if (overlayView.parent == null) {
             addView(overlayView, OVERLAY_HIERARCHY_INDEX)
         }
+        overlayView.setMeasureListener(this)
     }
 
     private fun calculateViewport(rect: RectF, width: Int, height: Int, offset: Int, aspectX: Int, aspectY: Int): RectF {

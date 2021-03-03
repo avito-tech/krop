@@ -96,17 +96,15 @@ class MainActivity : AppCompatActivity() {
         uri = savedInstanceState?.getParcelable(KEY_URI) ?: Uri.EMPTY
 
         if (savedInstanceState == null) {
-            inputAspectX.progress = 0
-            inputAspectY.progress = 0
+            inputAspectX.progress = 1
+            inputAspectY.progress = 1
 
             setInputOverlayColor(resources.getColor(R.color.default_overlay_color))
 
             kropView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
-                    inputOffset.progress = ((kropView.width / 2) / convertPixelsToDp(
-                            px = resources.getDimension(R.dimen.default_offset),
-                            context = kropView.context
-                    )).toInt()
+                    val offset = resources.getDimension(R.dimen.default_offset)
+                    inputOffset.progress = (offset / (kropView.measuredWidth / 2) * 100).toInt()
                     kropView.viewTreeObserver.removeOnGlobalLayoutListener(this)
                 }
             })
@@ -227,8 +225,8 @@ class MainActivity : AppCompatActivity() {
     private fun applySettings() {
         try {
             val offset = (inputOffset.progress * (kropView.width / 2)) / 100
-            val aspectX = inputAspectX.progress + 1
-            val aspectY = inputAspectY.progress + 1
+            val aspectX = inputAspectX.progress
+            val aspectY = inputAspectY.progress
             val overlayColor = Color.parseColor(inputOverlayColor.text.toString())
 
             when(overlayShape.checkedRadioButtonId) {

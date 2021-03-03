@@ -8,10 +8,11 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.util.AttributeSet
-import androidx.annotation.IntDef
 import android.view.View
+import androidx.annotation.IntDef
 
-abstract class OverlayView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
+abstract class OverlayView(context: Context, attrs: AttributeSet? = null) :
+        View(context, attrs), ViewportUpdateListener {
 
     private var overlayColor: Int = Color.TRANSPARENT
     private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -20,7 +21,8 @@ abstract class OverlayView(context: Context, attrs: AttributeSet? = null) : View
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
 
-    var viewport = RectF()
+    private lateinit var viewport: RectF
+    private lateinit var measureListener: MeasureListener
 
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
@@ -30,21 +32,25 @@ abstract class OverlayView(context: Context, attrs: AttributeSet? = null) : View
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
 
-        if (viewport.isEmpty) {
-            with(viewport) {
-                left = 0f
-                top = 0f
-                right = width.toFloat()
-                bottom = height.toFloat()
-            }
+        check(::measureListener.isInitialized) {
+            "Overlay not inited correctly: check, if it is referenced by any MeasureListener implementation"
         }
+        measureListener.onOverlayMeasured(width = width, height = height)
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    override fun onUpdateViewport(newViewport: RectF) {
+        viewport = newViewport
     }
 
     fun setOverlayColor(color: Int) {
         overlayColor = color
         invalidate()
+    }
+
+    fun setMeasureListener(listener: MeasureListener) {
+        measureListener = listener
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -59,6 +65,10 @@ abstract class OverlayView(context: Context, attrs: AttributeSet? = null) : View
      * @param clearPaint paint for removing color in custom area of canvas
      */
     protected abstract fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint)
+
+    interface MeasureListener {
+        fun onOverlayMeasured(width: Int, height: Int)
+    }
 }
 
 class OvalOverlay(context: Context) : OverlayView(context) {

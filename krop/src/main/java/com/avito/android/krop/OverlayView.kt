@@ -7,43 +7,41 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
-import androidx.annotation.IntDef
+import android.util.AttributeSet
 import android.view.View
+import androidx.annotation.IntDef
 
-class OverlayView(context: Context) : View(context) {
+abstract class OverlayView(context: Context, attrs: AttributeSet? = null) :
+        View(context, attrs), ViewportUpdateListener {
 
     private var overlayColor: Int = Color.TRANSPARENT
-    private var overlayShape: Int = SHAPE_OVAL
-    private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
-    var viewport = RectF()
-
-    constructor(context: Context, @OverlayShape shape: Int) : this(context) {
-        this.overlayShape = shape
+    private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
+        style = Paint.Style.FILL
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
+
+    private lateinit var viewport: RectF
+    private lateinit var measureListener: MeasureListener
 
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
-
-        clearPaint.color = Color.BLACK
-        clearPaint.style = Paint.Style.FILL
-        clearPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
 
-        if (viewport.isEmpty) {
-            with(viewport) {
-                left = 0f
-                top = 0f
-                right = width.toFloat()
-                bottom = height.toFloat()
-            }
+        check(::measureListener.isInitialized) {
+            "Overlay not inited correctly: check, if it is referenced by any MeasureListener implementation"
         }
+        measureListener.onOverlayMeasured(width = width, height = height)
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    override fun onUpdateViewport(newViewport: RectF) {
+        viewport = newViewport
     }
 
     fun setOverlayColor(color: Int) {
@@ -51,26 +49,46 @@ class OverlayView(context: Context) : View(context) {
         invalidate()
     }
 
-    fun setOverlayShape(@OverlayShape shape: Int) {
-        overlayShape = shape
-        invalidate()
+    fun setMeasureListener(listener: MeasureListener) {
+        measureListener = listener
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         canvas.drawColor(overlayColor)
-        when (overlayShape) {
-            SHAPE_OVAL -> canvas.drawOval(viewport, clearPaint)
-            else -> canvas.drawRect(viewport, clearPaint)
-        }
+        canvas.drawViewportView(viewport, clearPaint)
     }
 
+    /**
+     * @param viewport focus window rectangle on canvas
+     * @param clearPaint paint for removing color in custom area of canvas
+     */
+    protected abstract fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint)
+
+    interface MeasureListener {
+        fun onOverlayMeasured(width: Int, height: Int)
+    }
+}
+
+class OvalOverlay(context: Context) : OverlayView(context) {
+
+    override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
+        drawOval(viewport, clearPaint)
+    }
+}
+
+class RectOverlay(context: Context) : OverlayView(context) {
+
+    override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
+        drawRect(viewport, clearPaint)
+    }
 }
 
 @IntDef(SHAPE_OVAL, SHAPE_RECT)
 @Retention(AnnotationRetention.SOURCE)
 annotation class OverlayShape
 
+const val SHAPE_CUSTOM = -1
 const val SHAPE_OVAL = 0
 const val SHAPE_RECT = 1

@@ -1,6 +1,5 @@
 package com.avito.android.krop.util
 
-import android.graphics.RectF
 import android.os.Parcel
 import android.os.Parcelable
 
@@ -11,13 +10,6 @@ class SizeF(var width: Float = 0.0f, var height: Float = 0.0f) : Parcelable {
 
     val heightInt: Int
         get() = height.toInt()
-
-    fun middle(size: SizeF) = RectF(
-            (width - size.width) / 2,
-            (height - size.height) / 2,
-            (width - size.width) / 2,
-            (height - size.height) / 2
-    )
 
     constructor(parcel: Parcel) : this(
             width = parcel.readFloat(),

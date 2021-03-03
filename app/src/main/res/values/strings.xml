@@ -18,5 +18,6 @@
     <string name="overlay_shape">Overlay shape</string>
     <string name="shape_oval">Oval</string>
     <string name="shape_rect">Rect</string>
+    <string name="shape_custom">Custom shape example</string>
     <string name="hint_rotation_angle">Rotation angle</string>
 </resources>

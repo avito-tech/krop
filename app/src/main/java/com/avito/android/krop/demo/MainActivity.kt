@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewFlipper: ViewFlipper
     private lateinit var cropContainer: ViewFlipper
     private lateinit var kropView: KropView
+    private lateinit var customOverlay: CustomOverlay
     private lateinit var resultImage: ImageView
     private lateinit var inputRotationAngle: EditText
     private lateinit var inputOffset: SeekBar
@@ -72,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         inputOverlayColor = findViewById(R.id.input_overlay_color)
         inputRotationAngle = findViewById(R.id.input_rotation_angle)
         overlayShape = findViewById(R.id.overlay_shape)
+        customOverlay = findViewById(R.id.custom_overlay)
 
         kropView = findViewById(R.id.krop_view)
 
@@ -94,17 +96,15 @@ class MainActivity : AppCompatActivity() {
         uri = savedInstanceState?.getParcelable(KEY_URI) ?: Uri.EMPTY
 
         if (savedInstanceState == null) {
-            inputAspectX.progress = 0
-            inputAspectY.progress = 0
+            inputAspectX.progress = 1
+            inputAspectY.progress = 1
 
             setInputOverlayColor(resources.getColor(R.color.default_overlay_color))
 
             kropView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
-                    inputOffset.progress = ((kropView.width / 2) / convertPixelsToDp(
-                            px = resources.getDimension(R.dimen.default_offset),
-                            context = kropView.context
-                    )).toInt()
+                    val offset = resources.getDimension(R.dimen.default_offset)
+                    inputOffset.progress = (offset / (kropView.measuredWidth / 2) * 100).toInt()
                     kropView.viewTreeObserver.removeOnGlobalLayoutListener(this)
                 }
             })
@@ -225,18 +225,19 @@ class MainActivity : AppCompatActivity() {
     private fun applySettings() {
         try {
             val offset = (inputOffset.progress * (kropView.width / 2)) / 100
-            val aspectX = inputAspectX.progress + 1
-            val aspectY = inputAspectY.progress + 1
+            val aspectX = inputAspectX.progress
+            val aspectY = inputAspectY.progress
             val overlayColor = Color.parseColor(inputOverlayColor.text.toString())
-            val shape = when(overlayShape.checkedRadioButtonId) {
-                R.id.shape_oval -> 0
-                else -> 1
+
+            when(overlayShape.checkedRadioButtonId) {
+                R.id.shape_oval -> kropView.applyOverlayShape(0)
+                R.id.shape_rect -> kropView.applyOverlayShape(1)
+                else -> kropView.applyOverlay(CustomOverlay(this))
             }
             kropView.apply {
                 applyAspectRatio(aspectX, aspectY)
                 applyOffset(offset)
                 applyOverlayColor(overlayColor)
-                applyOverlayShape(shape)
             }
         } catch (ignored: Throwable) {
             Snackbar.make(kropView, R.string.unable_to_apply_settings, Snackbar.LENGTH_LONG).show()

@@ -9,12 +9,14 @@
         <enum name="oval" value="0"/>
         <enum name="rect" value="1"/>
     </attr>
+    <attr name="krop_overlay" format="reference" />
 
     <declare-styleable name="KropView">
         <attr name="krop_offset" />
         <attr name="krop_aspectX" />
         <attr name="krop_aspectY" />
         <attr name="krop_overlayColor" />
+        <attr name="krop_overlay" />
         <attr name="krop_shape" />
     </declare-styleable>
 

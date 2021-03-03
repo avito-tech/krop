@@ -115,7 +115,7 @@ or in code:
 kropView.applyOffset(offset = 120)
 ```
 
-* Set overlay style (px):
+* Set overlay style:
 
 in XML layout:
 ```java
@@ -127,7 +127,8 @@ kropView.applyOverlayShape(1)
 ```
 All standart shapes are listed in OverlayShape class.
 
-You can also create your own overlay, by inheriting OverlayView, and referencing it:
+You can also create your own overlay, by inheriting OverlayView, and referencing it.
+
 in XML layout:
 ```java
 app:krop_overlay="@id/custom_overlay"

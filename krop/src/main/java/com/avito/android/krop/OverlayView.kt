@@ -71,14 +71,14 @@ abstract class OverlayView(context: Context, attrs: AttributeSet? = null) :
     }
 }
 
-class OvalOverlay(context: Context) : OverlayView(context) {
+class OvalOverlay(context: Context, attrs: AttributeSet? = null) : OverlayView(context, attrs) {
 
     override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
         drawOval(viewport, clearPaint)
     }
 }
 
-class RectOverlay(context: Context) : OverlayView(context) {
+class RectOverlay(context: Context, attrs: AttributeSet? = null) : OverlayView(context, attrs) {
 
     override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
         drawRect(viewport, clearPaint)

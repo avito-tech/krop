@@ -25,6 +25,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import com.avito.android.krop.KropView
+import com.avito.android.krop.OverlayView
 import com.avito.android.krop.util.ScaleAfterRotationStyle
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
@@ -39,7 +40,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewFlipper: ViewFlipper
     private lateinit var cropContainer: ViewFlipper
     private lateinit var kropView: KropView
-    private lateinit var customOverlay: CustomOverlay
+    private lateinit var customOverlay: OverlayView
     private lateinit var resultImage: ImageView
     private lateinit var inputRotationAngle: EditText
     private lateinit var inputOffset: SeekBar

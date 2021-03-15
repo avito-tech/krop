@@ -118,11 +118,21 @@ class KropView(context: Context, attrs: AttributeSet) :
         return result
     }
 
-    override fun onOverlayMeasured(width: Int, height: Int) {
+    override fun onOverlayMeasured() {
+        val width = overlayView.measuredWidth
+        val height = overlayView.measuredHeight
         calculateViewport(viewport, width, height, offset, aspectX, aspectY)
 
         overlayView.onUpdateViewport(viewport)
-        imageView.onUpdateViewport(viewport)
+
+        // Viewport is calculated on the overlay axis.
+        // Thus it might be shifted relative to the KropView, correction should be made
+        val imageViewport = RectF(viewport).also {
+            val dx = overlayView.left - left
+            val dy = overlayView.top - top
+            it.offset(dx.toFloat(), dy.toFloat())
+        }
+        imageView.onUpdateViewport(imageViewport)
         imageView.requestLayout()
         invalidate()
     }

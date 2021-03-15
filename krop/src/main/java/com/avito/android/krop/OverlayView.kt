@@ -28,16 +28,13 @@ abstract class OverlayView(context: Context, attrs: AttributeSet? = null) :
         setLayerType(LAYER_TYPE_SOFTWARE, null)
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = MeasureSpec.getSize(heightMeasureSpec)
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
 
         check(::measureListener.isInitialized) {
             "Overlay not inited correctly: check, if it is referenced by any MeasureListener implementation"
         }
-        measureListener.onOverlayMeasured(width = width, height = height)
-
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        measureListener.onOverlayMeasured()
     }
 
     override fun onUpdateViewport(newViewport: RectF) {
@@ -67,18 +64,18 @@ abstract class OverlayView(context: Context, attrs: AttributeSet? = null) :
     protected abstract fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint)
 
     interface MeasureListener {
-        fun onOverlayMeasured(width: Int, height: Int)
+        fun onOverlayMeasured()
     }
 }
 
-class OvalOverlay(context: Context) : OverlayView(context) {
+class OvalOverlay(context: Context, attrs: AttributeSet? = null) : OverlayView(context, attrs) {
 
     override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
         drawOval(viewport, clearPaint)
     }
 }
 
-class RectOverlay(context: Context) : OverlayView(context) {
+class RectOverlay(context: Context, attrs: AttributeSet? = null) : OverlayView(context, attrs) {
 
     override fun Canvas.drawViewportView(viewport: RectF, clearPaint: Paint) {
         drawRect(viewport, clearPaint)

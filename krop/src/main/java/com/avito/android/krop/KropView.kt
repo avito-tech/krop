@@ -3,7 +3,6 @@ package com.avito.android.krop
 import android.content.Context
 import android.content.res.TypedArray
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.RectF
@@ -13,8 +12,10 @@ import android.util.AttributeSet
 import android.widget.FrameLayout
 import androidx.annotation.IdRes
 import androidx.annotation.WorkerThread
+import com.avito.android.krop.util.BitmapTransformation
+import com.avito.android.krop.util.KropTransformation
 import com.avito.android.krop.util.ScaleAfterRotationStyle
-import com.avito.android.krop.util.Transformation
+import com.avito.android.krop.util.transformWith
 
 class KropView(context: Context, attrs: AttributeSet) :
         FrameLayout(context, attrs), OverlayView.MeasureListener {
@@ -100,22 +101,37 @@ class KropView(context: Context, attrs: AttributeSet) :
         imageView.setImageBitmap(bitmap)
     }
 
-    fun setTransformation(transformation: Transformation) =
+    fun setTransformation(transformation: KropTransformation) =
             imageView.setTransformation(transformation)
 
     fun getTransformation() = imageView.getTransformation()
 
     @WorkerThread
     fun getCroppedBitmap(): Bitmap? {
-
-        val (rect, multiplier) = getCropRect()
-
         val renderBitmap = bitmap ?: return null
-        val result = Bitmap.createBitmap(rect.width().toInt(), rect.height().toInt(), renderBitmap.config)
-        val canvas = Canvas(result)
-        canvas.matrix = Matrix(imageView.imageMatrix).apply { postScale(multiplier, multiplier) }
-        canvas.drawBitmap(renderBitmap, 0f, 0f, null)
-        return result
+        val transformation = getResultTransformation()
+        return renderBitmap.transformWith(transformation)
+    }
+
+    fun getResultTransformation(): BitmapTransformation {
+        val bitmap = bitmap ?: return BitmapTransformation()
+        val bounds = imageView.getImageBounds()
+        val multiplier = bitmap.width.toFloat() / bounds.width()
+        val rect = RectF()
+        with(rect) {
+            left = (-bounds.left) * multiplier
+            top = (-bounds.top) * multiplier
+            right = (-bounds.left + viewport.width()) * multiplier
+            bottom = (-bounds.top + viewport.height()) * multiplier
+        }
+
+        val matrix = Matrix(imageView.imageMatrix).apply { postScale(multiplier, multiplier) }
+
+        return BitmapTransformation(
+                matrix,
+                inputSize = BitmapTransformation.Size(bitmap.width, bitmap.height),
+                outputSize = BitmapTransformation.Size(rect.width().toInt(), rect.height().toInt()),
+        )
     }
 
     override fun onOverlayMeasured() {
@@ -257,24 +273,9 @@ class KropView(context: Context, attrs: AttributeSet) :
         return rect
     }
 
-    private fun getCropRect(): Pair<RectF, Float> {
-        val rect = RectF()
-        val bitmap = bitmap ?: return rect to 1f
-        val bounds = imageView.getImageBounds()
-        val multiplier = bitmap.width.toFloat() / bounds.width()
-        with(rect) {
-            left = (-bounds.left) * multiplier
-            top = (-bounds.top) * multiplier
-            right = (-bounds.left + viewport.width()) * multiplier
-            bottom = (-bounds.top + viewport.height()) * multiplier
-        }
-
-        return rect to multiplier
-    }
-
     interface TransformationListener {
 
-        fun onUpdate(transformation: Transformation)
+        fun onUpdate(transformation: KropTransformation)
 
     }
 

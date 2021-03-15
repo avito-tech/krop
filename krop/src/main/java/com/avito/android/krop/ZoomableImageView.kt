@@ -28,7 +28,7 @@ import com.avito.android.krop.util.KPoint
 import com.avito.android.krop.util.KRect
 import com.avito.android.krop.util.ScaleAfterRotationStyle
 import com.avito.android.krop.util.SizeF
-import com.avito.android.krop.util.Transformation
+import com.avito.android.krop.util.KropTransformation
 import java.lang.Math.toRadians
 import kotlin.math.abs
 import kotlin.math.cos
@@ -74,7 +74,7 @@ class ZoomableImageView : ImageView, ViewportUpdateListener {
     private var onDrawReady: Boolean = false
 
     private var delayedZoomVariables: ZoomVariables? = null
-    private var delayedTransformation: Transformation? = null
+    private var delayedTransformation: KropTransformation? = null
 
     //
     // Size of view and previous view size (ie before rotation)
@@ -449,17 +449,17 @@ class ZoomableImageView : ImageView, ViewportUpdateListener {
         setZoom(currentZoom, focusX, focusY)
     }
 
-    fun getTransformation(): Transformation {
+    fun getTransformation(): KropTransformation {
         val offset = getFocusOffset()
 
-        return Transformation(
+        return KropTransformation(
                 scale = currentZoom,
                 focusOffset = PointF(offset.x, offset.y),
                 rotationAngle = rotationAngle
         )
     }
 
-    fun setTransformation(transformation: Transformation) {
+    fun setTransformation(transformation: KropTransformation) {
         if (!onDrawReady) {
             delayedTransformation = transformation
             return

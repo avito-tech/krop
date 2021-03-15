@@ -28,4 +28,5 @@ dependencies {
     implementation "androidx.annotation:annotation:$androidXVersion"
 
     testImplementation 'junit:junit:4.13'
+    testImplementation 'org.robolectric:robolectric:4.4'
 }

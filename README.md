@@ -61,10 +61,11 @@ To get cropped bitmap, use `getCroppedBitmap`:
 val bitmap = kropView.getCroppedBitmap()
 ```
 
-or get selected area `RectF` and crop bitmap manually when you need it:
+or get service object `BitmapTransformation` and crop bitmap manually when you need it:
 
 ```kotlin
-val rect = kropView.getCropRect()
+val changes = kropView.getResultTransformation()
+val result = bitmap.transformWith(changes)
 ```
 
 ### Listeners
@@ -74,7 +75,7 @@ You may listen for image update event (move, scale, rotation), by defining `Tran
 ```kotlin
     interface TransformationListener {
 
-        fun onUpdate(transformation: Transformation)
+        fun onUpdate(transformation: KropTransformation)
 
     }
 ```

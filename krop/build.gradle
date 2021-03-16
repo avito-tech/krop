@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
 
 android {
     compileSdkVersion 28
@@ -27,4 +28,5 @@ dependencies {
     implementation "androidx.annotation:annotation:$androidXVersion"
 
     testImplementation 'junit:junit:4.13'
+    testImplementation 'org.robolectric:robolectric:4.4'
 }
